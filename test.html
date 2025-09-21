@@ -321,7 +321,6 @@ window.addEventListener('load', ()=>{
 
 // --- GSAP ScrollTrigger & lazy/floating init ---
 gsap.registerPlugin(ScrollTrigger);
-
 // Floating animation helper - create a looping tween and store marker on element
 function applyFloatingIfEligible(img){
   if(img._floatingApplied) return;
@@ -336,6 +335,74 @@ function applyFloatingIfEligible(img){
     });
   }
 }
+
+// Reflow stages to fit viewport: collects all images and distributes them into
+// stage-sized grids so each stage shows a responsive grid (no one long column).
+function reflowStages(options = {}){
+  const main = document.getElementById('gallery');
+  if(!main) return;
+  // Collect images in document order from existing stages
+  const oldStages = Array.from(main.querySelectorAll('.stage'));
+  const images = [];
+  oldStages.forEach(st => {
+    Array.from(st.querySelectorAll('img')).forEach(img => images.push(img));
+  });
+  // If there are no images or only one stage already sized well, do nothing
+  if(images.length === 0) return;
+  // Remove old stages
+  oldStages.forEach(st => st.remove());
+
+  // Compute stage/grid sizing based on viewport
+  const stageHeight = Math.round(window.innerHeight * 0.95); // leave small breathing room
+  const stageWidth = window.innerWidth;
+  const imageAspectRatio = options.imageAspectRatio || 1; // default square
+  // desired width tries to target ~3-5 columns depending on screen width
+  const approxCols = Math.min(6, Math.max(1, Math.floor(stageWidth / 240)));
+  const desiredImageWidth = Math.max(140, Math.min(360, Math.floor(stageWidth / approxCols)));
+  const desiredImageHeight = Math.round(desiredImageWidth / imageAspectRatio);
+  const colsPerStage = Math.max(1, Math.floor(stageWidth / desiredImageWidth));
+  const rowsPerStage = Math.max(1, Math.floor(stageHeight / desiredImageHeight));
+  const maxImagesPerStage = Math.max(1, colsPerStage * rowsPerStage);
+
+  let idx = 0;
+  while(idx < images.length){
+    const currentStage = document.createElement('div');
+    currentStage.className = 'stage';
+    // Give inline grid settings so CSS grid aligns with our calc
+    currentStage.style.display = 'grid';
+    currentStage.style.gridTemplateColumns = `repeat(${colsPerStage}, 1fr)`;
+    currentStage.style.gridAutoRows = `${desiredImageHeight}px`;
+    currentStage.style.gap = '14px';
+    currentStage.style.height = `${stageHeight}px`;
+    currentStage.style.width = '100%';
+    currentStage.style.padding = '18px 40px 60px';
+    currentStage.style.boxSizing = 'border-box';
+
+    const chunk = images.slice(idx, idx + maxImagesPerStage);
+    chunk.forEach(img => {
+      // clear any transform inline styles that may break layout
+      img.style.transform = '';
+      currentStage.appendChild(img);
+    });
+    main.appendChild(currentStage);
+    idx += maxImagesPerStage;
+  }
+
+  // Make sure images remain keyboard focusable
+  main.querySelectorAll('.stage img').forEach(img => { img.tabIndex = 0; img.style.cursor = 'pointer'; });
+}
+
+// Run an initial reflow as early as possible (before lazy observer captures images)
+document.addEventListener('DOMContentLoaded', ()=>{
+  try{ reflowStages(); }catch(err){ console.warn('reflowStages error', err); }
+});
+
+// Reflow again on resize (debounced)
+let __reflowTimer = null;
+window.addEventListener('resize', ()=>{
+  clearTimeout(__reflowTimer);
+  __reflowTimer = setTimeout(()=>{ reflowStages(); ScrollTrigger.refresh(); }, 220);
+});
 
 // IntersectionObserver to lazy-load large images from data-src and trigger reveal + floating
 const lazyImages = document.querySelectorAll('img.lazy');
