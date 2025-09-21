@@ -1,0 +1,632 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Belevision — قراءات</title>
+<style>
+/* header / topbar settings */
+:root{--bg-dark:#000000;--text:#ffffff;--accent:#FFD36F;--blur-bg:blur(10px);--header-height:80px}
+/* single-line reset */
+*{box-sizing:border-box;margin:0;padding:0;}html,body{height:100%;width:100%;font-family:'IBM Plex Sans', sans-serif;overflow:hidden;background:var(--bg-dark);color:var(--text); cursor: grab;}html:active, body:active { cursor: grabbing; }
+
+/* semantic header fixed at top; reserve space using --header-height */
+.site-header{position:fixed;left:0;top:0;width:100%;height:var(--header-height);display:flex;align-items:center;justify-content:center;z-index:1000;pointer-events:auto;background:var(--bg-dark);border-bottom:1px solid rgba(255,255,255,0.1);}
+.site-header__inner{width:100%;max-width:1100px;padding:0 18px;display:flex;align-items:center;justify-content:center}
+.site-logo{font-weight:700;color:var(--text);font-family:'Bradley Hand', cursive, 'IBM Plex Sans', sans-serif;font-size:clamp(18px, 2.6vw, 28px);text-decoration:none;display:inline-flex;align-items:center;gap:10px;padding:6px 8px;border-radius:6px;text-shadow: 0 0 6px #FFD36F, 0 0 12px rgba(255,211,111,0.7);}
+.site-logo:focus-visible{outline:3px solid rgba(255,211,111,0.22);outline-offset:4px;border-radius:6px}
+.site-logo .site-mark{width:28px;height:28px;background:linear-gradient(90deg,#FFD36F,#FFB66B);border-radius:50%;display:inline-block}
+.site-word{font-family:'Bradley Hand', cursive, 'IBM Plex Sans', sans-serif; font-weight:700; font-size:1.05em; color:var(--text)}
+/* small skip link for keyboard users */
+.skip-link{position:absolute;left:12px;top:8px;background:#111;color:var(--text);padding:8px 10px;border-radius:6px;text-decoration:none;transform:translateY(-120%);transition:transform 0.2s ease;z-index:1100}
+.skip-link:focus{transform:translateY(0%)}
+body{padding-top:var(--header-height);} /* push content below the bar */
+
+/* background canvas and layout */
+#canvas-bg{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;}
+.wrap{position:relative;z-index:2;min-height:calc(100vh - var(--header-height));display:flex;align-items:center;justify-content:center;flex-direction:column;text-align:center;padding:28px;}
+.logo{position:absolute;left:20px;top:18px;z-index:3;font-weight:600;color:rgba(255,255,255,0.9);cursor:pointer;}
+#scroll-frame{position:relative; z-index:3; width:100vw; height:calc(100vh - var(--header-height)); overflow:hidden;}
+#portal-container{position:relative; top: 0; left: 0; z-index:3; width:100%; min-height:calc(100vh - var(--header-height)); height:auto; padding:3cm; box-sizing:border-box;}
+#lines-canvas{position:absolute; top: 0; left: 0; width:100%; height:100%; z-index:2; pointer-events:none;}
+.portal-item{
+  cursor:pointer;
+  font-size:clamp(16px, 2vw, 24px);
+  font-weight:700;
+  color:var(--text);
+  text-shadow:0 0 15px var(--accent);
+  position:absolute;
+  background:none;
+  border:none;
+  box-shadow:none;
+  transition:text-shadow 0.3s, transform 0.3s;
+  z-index:4;
+  padding: 5px 10px;
+  /* Remove fixed width/height; will set via JS for dynamic sizing */
+  /* width:auto; height:auto; */
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  border-radius: 0.7em;
+}
+.portal-item:hover{
+  text-shadow:0 0 30px #FFD36F, 0 0 15px rgba(255,211,111,0.6);
+  transform:scale(1.12);
+}
+.popup-overlay{position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.45);backdrop-filter:var(--blur-bg);z-index:998;opacity:0;pointer-events:none;transition:opacity 0.5s;}
+.popup-overlay.active{opacity:1;pointer-events:auto;}
+.popup-content{position:fixed;background:linear-gradient(135deg,#fffbe6 80%,#fffde6 100%);color:#222;box-shadow:0 0 60px #FFD36F,0 0 10px #000;border-radius:18px;padding:36px 32px 32px 32px;max-width:600px;min-width:320px;min-height:220px;max-height:80vh;overflow:auto;opacity:0;transform:scale(0);z-index:999;transition:all 0.6s cubic-bezier(.77,0,.18,1);display:flex;flex-direction:column;align-items:center;justify-content:center;border:2px solid #FFD36F;}
+.popup-content.active{opacity:1;transform:scale(1);}
+.popup-content h2{margin-bottom:18px;font-size:2.1em;color:#222;font-family:'Bradley Hand',cursive;}
+.popup-content p{line-height:2.1;font-size:1.25em;color:#333;font-family:'IBM Plex Sans',sans-serif;}
+.close-popup{position:absolute;top:18px;right:18px;font-size:1.5em;background:none;border:none;color:#FFD36F;cursor:pointer;z-index:1001;transition:color 0.3s;}
+.close-popup:hover{color:#222;}
+
+</style>
+</head>
+<body>
+<a class="skip-link" href="#portal-container">Skip to content</a>
+<header class="site-header" role="banner">
+  <div class="site-header__inner">
+    <a class="site-logo" href="index.html" aria-label="العودة إلى الصفحة الرئيسية">
+      <span class="site-word">Belevision</span>
+    </a>
+    <!-- Quick nav links -->
+    <nav aria-label="Site navigation" style="position:absolute;right:18px;top:12px;display:flex;gap:12px;">
+      <a href="shadows.html" style="color:var(--text);text-decoration:none;font-weight:600;">اللقطات</a>
+      <a href="index.html" style="color:var(--text);text-decoration:none;font-weight:600;">الرئيسية</a>
+    </nav>
+  </div>
+</header>
+<canvas id="canvas-bg"></canvas>
+<div class="wrap">
+  <!-- logo removed per request -->
+  <canvas id="lines-canvas"></canvas>
+  <div id="scroll-frame"><div id="portal-container"></div></div>
+</div>
+
+<div class="popup-overlay" id="popupOverlay"></div>
+<div class="popup-content" id="popupContent">
+  <button class="close-popup" id="closePopup">&times;</button>
+  <h2 id="popupTitle"></h2>
+  <p id="popupText"></p>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.155.0/build/three.min.js"></script>
+<script>
+// ===== Background (Stars + Nebula) =====
+const canvas=document.getElementById('canvas-bg');
+const scene=new THREE.Scene();
+scene.fog=new THREE.FogExp2(0x000000,0.00015);
+const camera=new THREE.PerspectiveCamera(75,window.innerWidth/window.innerHeight,0.1,10000);
+camera.position.z=0;
+const renderer=new THREE.WebGLRenderer({canvas,alpha:true,antialias:true});
+renderer.setSize(window.innerWidth,window.innerHeight);
+renderer.setPixelRatio(window.devicePixelRatio);
+
+// ===== Stars =====
+// load point sprite once for this page
+const pointSprite = new THREE.TextureLoader().load('https://threejs.org/examples/textures/sprites/disc.png');
+function createStars(count,zRange){
+  const geometry=new THREE.BufferGeometry();
+  const positions=[],sizes=[],speeds=[],phases=[];
+    for(let i=0;i<count;i++){
+    positions.push((Math.random()-0.5)*4000,(Math.random()-0.5)*4000,-Math.random()*zRange);
+    // slightly larger sizes
+    sizes.push(Math.random()*2.2+1.2);
+    speeds.push(Math.random()*0.08+0.03);
+    phases.push(Math.random()*Math.PI*2);
+  }
+  geometry.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));
+  geometry.setAttribute('size',new THREE.Float32BufferAttribute(sizes,1));
+  geometry.setAttribute('speed',new THREE.Float32BufferAttribute(speeds,1));
+  geometry.setAttribute('phase',new THREE.Float32BufferAttribute(phases,1));
+  const material=new THREE.ShaderMaterial({
+    uniforms:{
+      time:{value:0},
+      pointTexture:{value:pointSprite}
+    },
+    vertexShader:`attribute float size;attribute float phase;varying float vDepth;varying float vPhase;void main(){vec4 mvPosition=modelViewMatrix*vec4(position,1.0);vDepth=-mvPosition.z;vPhase=phase;gl_PointSize=size*(220.0/vDepth);gl_Position=projectionMatrix*mvPosition;}`,
+  fragmentShader:`uniform sampler2D pointTexture;uniform float time;varying float vDepth;varying float vPhase;void main(){vec4 texColor=texture2D(pointTexture,gl_PointCoord);float intensity=1.05/(0.05+vDepth*0.00065);intensity*=0.78+0.28*sin(time*2.0+vPhase);intensity*=smoothstep(0.0,800.0,vDepth);gl_FragColor=vec4(vec3(intensity),texColor.a);}`,
+    transparent:true,blending:THREE.AdditiveBlending,depthTest:false
+  });
+  const stars=new THREE.Points(geometry,material);
+  scene.add(stars);
+  return stars;
+}
+
+// slightly increased counts for a richer but subtle background
+const nearStars=createStars(1100,1000);
+const midStars=createStars(700,3000);
+const farStars=createStars(450,5000);
+
+// ===== Nebula =====
+const nebulaGeometry=new THREE.PlaneGeometry(7000,7000,32,32);
+const nebulaMaterial=new THREE.ShaderMaterial({
+  uniforms:{time:{value:0}},
+  vertexShader:`varying vec2 vUv;void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}`,
+  fragmentShader:`varying vec2 vUv;uniform float time;void main(){float n=sin(vUv.x*6.0 + time*0.04)*cos(vUv.y*6.0 + time*0.06);vec3 color=vec3(0.01,0.01,0.02)+vec3(n*0.04,n*0.02,n*0.04);gl_FragColor=vec4(color,0.45);}`,
+  transparent:true,blending:THREE.AdditiveBlending,depthTest:false
+});
+const nebula=new THREE.Mesh(nebulaGeometry,nebulaMaterial);
+nebula.position.z=-1800;
+scene.add(nebula);
+
+// ===== Animate =====
+function animate(time){
+  requestAnimationFrame(animate);
+  // allow external pausing to reduce main-thread jank during UI animations
+  if(window.bgControl && !window.bgControl.isRunning()) return;
+  nebulaMaterial.uniforms.time.value=time*0.001;
+  [nearStars,midStars,farStars].forEach(layer=>{
+    const pos=layer.geometry.attributes.position.array;
+    const speeds=layer.geometry.attributes.speed.array;
+    const count=pos.length/3;
+    for(let i=0;i<count;i++){
+      let idx=i*3;
+      pos[idx+2]+=speeds[i]*1.0;
+      if(pos[idx+2]>50){
+        pos[idx]=(Math.random()-0.5)*4000;
+        pos[idx+1]=(Math.random()-0.5)*4000;
+        pos[idx+2]=-5000;
+      }
+    }
+    layer.geometry.attributes.position.needsUpdate=true;
+    layer.material.uniforms.time.value=time*0.001;
+  });
+  renderer.render(scene,camera);
+}
+animate();
+
+// Background control API to pause/resume Three.js loop during heavy UI animations
+window.bgControl = (function(){
+  let running = true;
+  return {
+    pause(){ running = false; },
+    resume(){ running = true; },
+    isRunning(){ return running; }
+  };
+})();
+
+// ===== Resize =====
+window.addEventListener('resize',()=>{
+  camera.aspect=window.innerWidth/window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth,window.innerHeight);
+});
+
+// ===== Portal items (Texts) =====
+// ===== Portal items (Texts) =====
+const portalContainer = document.getElementById('portal-container');
+const scrollFrame = document.getElementById('scroll-frame');
+const linesCanvas = document.getElementById('lines-canvas');
+const linesCtx = linesCanvas.getContext('2d');
+
+// ===== Floating Portal Items Animation =====
+// We'll attach floating state to each portal-item DOM element after placement.
+let floatingItems = [];
+
+const constellations = [
+    {
+        name: 'Ursa Minor',
+  stars: [{x:64,y:117},{x:87,y:104},{x:110,y:92},{x:132,y:80},{x:123,y:57},{x:149,y:63},{x:175,y:53}],
+        lines: [[0,1],[1,2],[2,3],[3,4],[3,5],[5,6]]
+    },
+    {
+        name: 'Cassiopeia',
+        stars: [{x:48,y:103},{x:75,y:100},{x:83,y:76},{x:110,y:78},{x:119,y:55}],
+        lines: [[0,1],[1,2],[2,3],[3,4]]
+    },
+    {
+        name: 'The Kite',
+        stars: [{x:100,y:130},{x:80,y:100},{x:120,y:100},{x:100,y:70},{x:100,y:20}],
+        lines: [[0,1],[0,2],[1,3],[2,3],[3,4]]
+    }
+];
+
+const texts = Array.from({ length: 15 }, (_, i) => ({ title: `نص ${i + 1}`, content: `هذا نص تجريبي رقم ${i + 1}. يمكنك وضع أي محتوى هنا.` }));
+const portalItems = [];
+
+// deterministic RNG for portal placement so arrangement can be reproduced
+function mulberry32(a){
+  return function(){
+    a |= 0; a = a + 0x6D2B79F5 | 0;
+    var t = Math.imul(a ^ a >>> 15, 1 | a);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  }
+}
+const seedParam = (new URLSearchParams(location.search)).get('seed');
+const seed = seedParam ? parseInt(seedParam,10) : (Date.now() & 0xFFFFFFFF);
+const rng = mulberry32(seed);
+
+function drawLines() {
+  const vw = scrollFrame.clientWidth;
+  const vh = scrollFrame.clientHeight;
+  const dpr = window.devicePixelRatio || 1;
+  linesCanvas.width = vw * dpr;
+  linesCanvas.height = vh * dpr;
+  linesCanvas.style.width = vw + 'px';
+  linesCanvas.style.height = vh + 'px';
+  linesCtx.setTransform(dpr,0,0,dpr,0,0);
+  linesCtx.clearRect(0,0,vw,vh);
+
+  linesCtx.strokeStyle = 'rgba(255, 211, 170, 0.15)';
+  linesCtx.lineWidth = 1.0;
+  linesCtx.lineCap = 'round';
+
+  const drawnConstellations = portalItems.reduce((acc, item) => {
+      const constId = item.dataset.constellationId;
+      if (!acc[constId]) acc[constId] = [];
+      acc[constId].push(item);
+      return acc;
+  }, {});
+
+  Object.values(drawnConstellations).forEach(constellationItems => {
+      const constData = constellations.find(c => c.name === constellationItems[0].dataset.constellationName);
+      if (!constData || !constData.lines) return;
+
+      const itemCoords = constellationItems.reduce((acc, item) => {
+          const starIndex = parseInt(item.dataset.starIndex, 10);
+          const rect = item.getBoundingClientRect();
+          acc[starIndex] = { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
+          return acc;
+      }, {});
+
+      linesCtx.beginPath();
+      constData.lines.forEach(line => {
+          const start = itemCoords[line[0]];
+          const end = itemCoords[line[1]];
+          if (start && end) {
+              linesCtx.moveTo(start.x, start.y);
+              linesCtx.lineTo(end.x, end.y);
+          }
+      });
+      linesCtx.stroke();
+  });
+}
+
+// throttle redraws to animation frames to avoid multiple paints per frame
+let _pendingDraw = false;
+function scheduleDraw(){
+  if(_pendingDraw) return;
+  _pendingDraw = true;
+  requestAnimationFrame(()=>{ try{ drawLines(); } finally { _pendingDraw = false; } });
+}
+
+function checkOverlap(item1, item2) {
+    const rect1 = item1.getBoundingClientRect();
+    const rect2 = item2.getBoundingClientRect();
+  const margin = 100; // increased space between items
+    return !(rect1.right + margin < rect2.left ||
+             rect1.left - margin > rect2.right ||
+             rect1.bottom + margin < rect2.top ||
+             rect1.top - margin > rect2.bottom);
+}
+
+function checkOverlapMargin(item1, item2, margin) {
+  const rect1 = item1.getBoundingClientRect();
+  const rect2 = item2.getBoundingClientRect();
+  return !(rect1.right + margin < rect2.left ||
+           rect1.left - margin > rect2.right ||
+           rect1.bottom + margin < rect2.top ||
+           rect1.top - margin > rect2.bottom);
+}
+
+// ---- DYNAMIC PORTAL ITEM SIZING AND PLACEMENT ----
+function placeItems() {
+  // Remove existing items
+  portalItems.length = 0;
+  while (portalContainer.firstChild) portalContainer.removeChild(portalContainer.firstChild);
+  floatingItems = [];
+
+  const pad = parseFloat(getComputedStyle(portalContainer).paddingLeft) || 48;
+  const usableW = scrollFrame.clientWidth - pad * 2;
+  const usableH = scrollFrame.clientHeight - pad * 2;
+
+  // Compute optimal item size for the number of items and available area
+  // We want to fill the viewport with n items, with some spacing, as large as possible.
+  const n = texts.length;
+  // Try to find optimal rows/cols for aspect ratio
+  let best = { rows: 1, cols: n, size: 0, itemW: 0, itemH: 0, gap: 0 };
+  for (let rows = 1; rows <= n; rows++) {
+    const cols = Math.ceil(n / rows);
+    const gap = 24; // px between items
+    const itemW = (usableW - gap * (cols - 1)) / cols;
+    const itemH = (usableH - gap * (rows - 1)) / rows;
+    // Use min size so items are square-ish but fit
+    const size = Math.min(itemW, itemH);
+    // Slightly prefer more square aspect
+    if (size > best.size || (size === best.size && Math.abs(cols - rows) < Math.abs(best.cols - best.rows))) {
+      best = { rows, cols, size, itemW, itemH, gap };
+    }
+  }
+  // Clamp minimum/maximum size for usability
+  const minSize = 90, maxSize = 220;
+  let finalW = Math.max(minSize, Math.min(best.itemW, maxSize));
+  let finalH = Math.max(minSize * 0.7, Math.min(best.itemH, maxSize * 0.8));
+  let gap = best.gap;
+  // Adjust gap if items are too small
+  if (finalW < 120) gap = 12;
+  if (finalW > 180) gap = 32;
+
+  // Compute grid positions
+  const positions = [];
+  let idx = 0;
+  for (let r = 0; r < best.rows; r++) {
+    for (let c = 0; c < best.cols; c++) {
+      if (idx >= n) break;
+      const x = pad + c * (finalW + gap);
+      const y = pad + r * (finalH + gap);
+      positions.push({ x, y, row: r, col: c });
+      idx++;
+    }
+  }
+
+  // Shuffle positions with deterministic rng for some variety
+  const shuffled = [...positions];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(rng() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+
+  // Place items
+  for (let i = 0; i < n; i++) {
+    const t = texts[i];
+    const pos = shuffled[i];
+    const div = document.createElement('div');
+    div.className = 'portal-item';
+    div.innerText = t.title;
+    div.dataset.index = i;
+    div.style.position = 'absolute';
+    div.style.left = pos.x + 'px';
+    div.style.top = pos.y + 'px';
+    div.style.width = finalW + 'px';
+    div.style.height = finalH + 'px';
+    div.style.visibility = 'visible';
+    div.style.fontSize = `clamp(16px, ${Math.max(1.1, finalH/16)}vw, 2.2em)`;
+    portalContainer.appendChild(div);
+    portalItems.push(div);
+  }
+
+  portalContainer.style.width = '100%';
+
+  // Scrolling: if items overflow, enable scroll
+  let maxBottom = 0;
+  portalItems.forEach(it => { const r = it.getBoundingClientRect(); maxBottom = Math.max(maxBottom, r.bottom); });
+  const viewportBottom = window.innerHeight;
+  if (maxBottom > viewportBottom) {
+    scrollFrame.style.overflow = 'auto';
+  } else {
+    scrollFrame.style.overflow = 'hidden';
+  }
+
+  // redraw lines when user scrolls
+  scrollFrame.removeEventListener('scroll', scheduleDraw);
+  scrollFrame.addEventListener('scroll', scheduleDraw);
+
+  // Attach floating state to each portal-item
+  floatingItems = portalItems.map((el, i) => {
+    const left = parseFloat(el.style.left) || 0;
+    const top = parseFloat(el.style.top) || 0;
+    const angle = Math.random() * Math.PI * 2;
+    const speed = 0.12 + Math.random() * 0.17;
+    return {
+      el,
+      x: left,
+      y: top,
+      vx: Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed,
+      width: el.offsetWidth || finalW,
+      height: el.offsetHeight || finalH,
+      id: el.dataset.index,
+      lastRect: null,
+      driftPhase: Math.random() * Math.PI * 2,
+    };
+  });
+
+  requestAnimationFrame(() => { scheduleDraw(); if (typeof attachPortalListeners === 'function') attachPortalListeners(); });
+}
+
+placeItems();
+
+// --- Floating Animation Loop (Refactored for smooth, natural drift and robust collision/repulsion) ---
+function animateFloatingItems() {
+  if (!floatingItems || floatingItems.length === 0) {
+    requestAnimationFrame(animateFloatingItems);
+    return;
+  }
+  const pad = parseFloat(getComputedStyle(portalContainer).paddingLeft) || 48;
+  const usableW = scrollFrame.clientWidth - pad * 2;
+  const usableH = scrollFrame.clientHeight - pad * 2;
+  const borderPad = 10; // px from edge
+  // For collision/repulsion
+  const repelDist = 44; // minimum allowed edge-to-edge distance
+  const repelStrength = 0.16; // repulsion factor
+  const maxSpeed = 1.1;
+  const driftChange = 0.04; // drift steering
+
+  // Update width/height in case of resize or content change
+  floatingItems.forEach(item => {
+    item.width = item.el.offsetWidth;
+    item.height = item.el.offsetHeight;
+  });
+
+  // Repulsion: edge-to-edge collision, push away if overlapping
+  for (let i = 0; i < floatingItems.length; i++) {
+    let a = floatingItems[i];
+    for (let j = i + 1; j < floatingItems.length; j++) {
+      let b = floatingItems[j];
+      // Find edge-to-edge distance
+      let ax = a.x, ay = a.y, bx = b.x, by = b.y;
+      let acx = ax + a.width/2, acy = ay + a.height/2;
+      let bcx = bx + b.width/2, bcy = by + b.height/2;
+      let dx = acx - bcx, dy = acy - bcy;
+      let dist = Math.hypot(dx, dy);
+      let minAllowed = (Math.max(a.width, b.width) + Math.max(a.height, b.height))/2 * 0.35 + repelDist;
+      // Compute edge-to-edge overlap
+      let overlap = minAllowed - dist;
+      if (overlap > 0.5 && dist > 1e-2) {
+        // Repel both equally, proportional to overlap
+        let nx = dx / dist, ny = dy / dist;
+        let push = overlap * repelStrength;
+        a.vx += nx * push * 0.5;
+        a.vy += ny * push * 0.5;
+        b.vx -= nx * push * 0.5;
+        b.vy -= ny * push * 0.5;
+      }
+    }
+  }
+
+  // Natural drift: each item has a unique phase/oscillation
+  const now = performance.now();
+  floatingItems.forEach(item => {
+    // Per-item drift direction and magnitude
+    const driftAngle =
+      Math.sin(now * 0.00011 + item.driftPhase) * Math.PI * 2 +
+      Math.cos(now * 0.00021 + item.driftPhase) * Math.PI;
+    const driftMag = 0.09 + 0.11 * Math.abs(Math.sin(now * 0.00015 + item.driftPhase));
+    // Smoothly steer toward drift direction
+    const targetVx = Math.cos(driftAngle) * driftMag;
+    const targetVy = Math.sin(driftAngle) * driftMag;
+    item.vx += (targetVx - item.vx) * driftChange;
+    item.vy += (targetVy - item.vy) * driftChange;
+    // Clamp speed
+    const vlen = Math.hypot(item.vx, item.vy);
+    if (vlen > maxSpeed) {
+      item.vx *= maxSpeed / vlen;
+      item.vy *= maxSpeed / vlen;
+    }
+  });
+
+  // Update positions and keep inside bounds
+  floatingItems.forEach(item => {
+    item.x += item.vx;
+    item.y += item.vy;
+    let xMin = pad + borderPad, xMax = pad + usableW - item.width - borderPad;
+    let yMin = pad + borderPad, yMax = pad + usableH - item.height - borderPad;
+    // Bounce from bounds
+    if (item.x < xMin) { item.x = xMin; item.vx *= -0.6; }
+    if (item.x > xMax) { item.x = xMax; item.vx *= -0.6; }
+    if (item.y < yMin) { item.y = yMin; item.vy *= -0.6; }
+    if (item.y > yMax) { item.y = yMax; item.vy *= -0.6; }
+    // Apply to DOM
+    item.el.style.left = item.x + "px";
+    item.el.style.top = item.y + "px";
+    item.lastRect = { left: item.x, top: item.y, width: item.width, height: item.height };
+  });
+
+  scheduleDraw();
+  requestAnimationFrame(animateFloatingItems);
+}
+// Start floating animation after initial placement
+window.addEventListener('DOMContentLoaded', () => {
+  requestAnimationFrame(animateFloatingItems);
+});
+window.addEventListener('resize', () => {
+  setTimeout(() => { requestAnimationFrame(animateFloatingItems); }, 60);
+});
+
+// drag-to-scroll on scrollFrame with recentering for infinite feeling
+let isDown = false, startX=0, startScroll=0, isDragging=false;
+// Scrolling/dragging disabled: all items are fixed inside the padded viewport area
+document.addEventListener('mouseup',()=>{ isDown=false; });
+
+window.addEventListener('resize', ()=>{ placeItems(); scheduleDraw(); });
+
+// redraw lines on resize only; scrolling disabled
+
+// Popup wiring
+const overlay = document.getElementById('popupOverlay');
+const popup = document.getElementById('popupContent');
+const popupTitle = document.getElementById('popupTitle');
+const popupText = document.getElementById('popupText');
+const closeBtn = document.getElementById('closePopup');
+let popupOrigin = { x:0,y:0,w:0,h:0 };
+let popupIndex = null;
+
+function attachPortalListeners(){
+    portalItems.forEach((el)=>{
+    el.addEventListener('click',(e)=>{
+      if (isDragging) return; // don't open while dragging
+      const idx = Number(el.dataset.index) || 0;
+      const rect = el.getBoundingClientRect();
+      // store index so we can find the element later when closing
+      popupIndex = idx;
+      // also store origin coords as a fallback
+      popupOrigin = { x: rect.left, y: rect.top, w: rect.width, h: rect.height };
+      popupTitle.innerText = texts[idx].title;
+      popupText.innerText = texts[idx].content;
+
+      // position popup at origin rect then animate to center
+      popup.style.left = popupOrigin.x + 'px';
+      popup.style.top = popupOrigin.y + 'px';
+      popup.style.width = popupOrigin.w + 'px';
+      popup.style.height = popupOrigin.h + 'px';
+      popup.style.transform = 'translate(0,0) scale(0.1)';
+      popup.classList.add('active');
+      overlay.classList.add('active');
+
+      // animate to center after a frame
+      requestAnimationFrame(()=>{
+        setTimeout(()=>{
+          popup.style.left = '50%';
+          popup.style.top = '50%';
+          popup.style.width = '600px';
+          popup.style.height = 'auto';
+          popup.style.transform = 'translate(-50%,-50%) scale(1)';
+        },8);
+      });
+    });
+    });
+}
+
+closeBtn.addEventListener('click',()=>{
+  // attempt to find the portal item by stored index and animate back to its current rect
+  let targetRect = null;
+  if (popupIndex !== null) {
+    const el = portalItems.find(it => Number(it.dataset.index) === popupIndex);
+    if (el) targetRect = el.getBoundingClientRect();
+  }
+  const dest = targetRect ? { x: targetRect.left, y: targetRect.top, w: targetRect.width, h: targetRect.height } : popupOrigin;
+
+  // animate back to destination
+  popup.style.transform = 'translate(0,0) scale(0.1)';
+  popup.style.left = dest.x + 'px';
+  popup.style.top = dest.y + 'px';
+  popup.style.width = dest.w + 'px';
+  popup.style.height = dest.h + 'px';
+  setTimeout(()=>{
+    popup.classList.remove('active');
+    overlay.classList.remove('active');
+    popup.style.transform = 'scale(0)';
+    // reset
+    popupIndex = null;
+  },420);
+});
+
+overlay.addEventListener('click', ()=>{
+    closeBtn.click();
+});
+
+attachPortalListeners();
+
+// Go back to homepage on logo click
+// logo removed; navigation handled via header link
+
+</script>
+</body>
+</html>
+
+<script>
+// Increase header word size by 4px (applies when .site-word exists)
+(function(){
+  try{
+    const el = document.querySelector('body > header > div > a > .site-word');
+    if(!el) return;
+    const cs = window.getComputedStyle(el);
+    const fs = cs.fontSize ? parseFloat(cs.fontSize) : null;
+    if(fs){ el.style.fontSize = (fs + 4) + 'px'; }
+  }catch(e){ console.error('increase site-word size failed', e); }
+})();
+</script>

@@ -1,219 +1,712 @@
 <!DOCTYPE html>
-<html lang="ar">
+<html lang="en" dir="ltr">
 <head>
 <meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Belevision — Landing 3D</title>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
+<title>Belevision — 3D Landing</title>
+<!-- Fonts: Inter (UI), Playfair Display (headline LTR), Cairo (Arabic) -->
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=Playfair+Display:wght@700&family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
+<!-- Import map so example modules which use the bare specifier 'three' work in the browser -->
+<script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.155.0/build/three.module.js"
+    }
+  }
+</script>
+<!-- Small inline SVG favicon to avoid a /favicon.ico 404 during local testing -->
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='14' fill='%23ffd36f'/%3E%3C/svg%3E">
+<!-- Load GSAP UMD build (loads a global `gsap`) to avoid CORS issues with ESM build on some CDNs -->
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.12.2/dist/gsap.min.js"></script>
 <style>
-:root{
-  --bg-dark:#000000;
-  --text:#ffffff;
-  --accent:#FFD36F;
-}
-*{box-sizing:border-box; margin:0; padding:0;}
-html, body {height:100%; width:100%; font-family: 'IBM Plex Sans', sans-serif; overflow:hidden; background:var(--bg-dark); color:var(--text);}
-#canvas-bg {position:fixed; top:0; left:0; width:100%; height:100%; z-index:0;}
-.wrap{position:relative; z-index:2; height:100vh; display:flex; align-items:center; justify-content:center; flex-direction:column; text-align:center; padding:28px;}
-.logo{ position:absolute; left:20px; top:18px; z-index:3; font-weight:600; color:rgba(255,255,255,0.9);}
-.headline{
-  font-family:'Bradley Hand', cursive; 
-  font-size:clamp(64px, 10vw, 128px); 
-  font-weight:700; 
-  margin-bottom:12px; 
-  text-shadow: 0 0 10px #FFD36F, 0 0 20px rgba(255, 211, 111, 0.7);
-}
-.sub{
-  font-size:clamp(14px,2vw,20px);
-  opacity:0.85; 
-  margin-bottom:36px; 
-  text-shadow: 0 0 8px rgba(255,255,255,0.4);
-}
-footer{position:absolute; bottom:12px; width:100%; display:flex; justify-content:center; gap:24px; font-size:12px; opacity:0.7; color:var(--text); z-index:3;}
-footer a {color:var(--text); text-decoration:none; transition:color 0.3s;}
-footer a:hover{color:var(--accent);}
-#portal-container {position:relative; z-index:3; display:flex; gap:48px; align-items:center; justify-content:center; flex-wrap:wrap;}
-.portal-item{
-  cursor:pointer; 
-  font-size:24px;
-  transition: all 0.3s ease; 
-  color:var(--text); 
-  text-shadow:0 0 15px var(--accent);
-}
-.portal-item:hover{ 
-  text-shadow: 0 0 30px #FFD36F, 0 0 15px rgba(255, 211, 111, 0.6);
-}
-#zoom-overlay{
-  position:fixed;
-  top:0; left:0; width:100%; height:100%;
-  background:#000;
-  z-index:999;
-  opacity:0;
-  pointer-events:none;
-  transition:opacity 0.6s ease;
-}
+  :root {
+    --bg-dark: #000000;
+    --text: #e0e0e0;
+    --accent: #FFD36F;
+    --glow-color: #ffcc66;
+  }
+  *, *::before, *::after {
+    box-sizing: border-box;
+  }
+  html, body {
+    height: 100%;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+  font-family: 'Inter', 'IBM Plex Sans', sans-serif;
+  font-weight: 300; /* lighter default weight for English UI */
+    overflow: hidden;
+    background: var(--bg-dark);
+    color: var(--text);
+  }
+  /* When the document is set to Arabic direction, prefer the Arabic display font */
+  [dir="rtl"] body, [dir="rtl"] .wrap {
+    font-family: 'Cairo', 'Inter', 'IBM Plex Sans', sans-serif;
+  }
+
+  /* Headline styling: serif for LTR, Arabic font for RTL */
+  .headline {
+    font-family: 'Playfair Display', 'Bradley Hand', cursive;
+  }
+  [dir="rtl"] .headline {
+    font-family: 'Cairo', 'Playfair Display', cursive;
+  }
+  #canvas-bg {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 0;
+    display: block;
+  }
+  .wrap {
+    position: relative;
+    z-index: 2;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    padding: 28px 24px;
+    opacity: 0;
+  }
+  .logo {
+    position: absolute;
+    left: 20px;
+    top: 18px;
+    z-index: 3;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.9);
+  }
+  .headline {
+    font-family: inherit; /* use Playfair Display for LTR or Cairo for RTL */
+    font-size: clamp(96px, 12vw, 144px);
+    font-weight: 600; /* slightly lighter headline */
+    margin-bottom: 16px;
+    color: var(--text);
+    text-shadow:
+      0 0 8px rgba(255, 211, 111, 0.6),
+      2px 2px 4px rgba(0,0,0,0.4),
+      -2px -2px 4px rgba(0,0,0,0.2);
+    user-select: none;
+    opacity: 0.95;
+  }
+  .sub {
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-weight: 500;
+    font-size: clamp(18px, 2.5vw, 24px);
+    opacity: 0.85;
+    margin-bottom: 40px;
+    color: var(--text);
+    text-shadow:
+      0 0 12px var(--accent),
+      0 0 24px rgba(255,211,111,0.5);
+    user-select: none;
+  }
+  #portal-container {
+    position: relative;
+    z-index: 3;
+    display: flex;
+    gap: 40px;
+    flex-wrap: wrap;
+    justify-content: center;
+    max-width: 100%;
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-weight: 600;
+  }
+  .portal-item {
+    cursor: pointer;
+    font-size: clamp(22px, 3vw, 30px);
+    color: var(--text);
+    padding: 8px 0;
+    border-radius: 0;
+    background: none;
+    transition:
+      color 0.35s ease,
+      transform 0.35s ease;
+    user-select: none;
+    outline-offset: 4px;
+    min-width: 90px;
+    border: none;
+    box-shadow: none;
+  }
+  .portal-item:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 4px;
+  }
+  .portal-item:hover,
+  .portal-item:focus {
+    color: var(--accent);
+    transform: scale(1.1);
+  }
+  .portal-item {
+    text-shadow: 0 0 4px rgba(255, 211, 111, 0.35);
+  }
+  footer {
+    position: absolute;
+    bottom: 12px;
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    gap: 24px;
+    font-size: 12px;
+    opacity: 0.7;
+    color: var(--text);
+    z-index: 3;
+    user-select: none;
+    flex-wrap: wrap;
+  }
+  footer a {
+    color: var(--text);
+    text-decoration: none;
+    transition: color 0.3s ease;
+  }
+  footer a:hover,
+  footer a:focus {
+    color: var(--accent);
+    outline: none;
+  }
+  footer span {
+    white-space: nowrap;
+  }
+  #zoom-overlay {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%;
+    height: 100%;
+    background: #000;
+    z-index: 999;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.6s ease;
+  }
+
+  /* Responsive adjustments */
+  @media (max-width: 600px) {
+    .headline {
+      font-size: clamp(48px, 14vw, 96px);
+      margin-bottom: 12px;
+    }
+    .sub {
+      font-size: clamp(16px, 4vw, 20px);
+      margin-bottom: 28px;
+    }
+    .portal-item {
+      font-size: clamp(18px, 5vw, 24px);
+      padding: 6px 0;
+      min-width: 70px;
+    }
+  }
+  #language-switcher {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    z-index: 5;
+    background: rgba(0,0,0,0.5);
+    border: none;
+    color: var(--text);
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-weight: 600;
+    font-size: 14px;
+    padding: 6px 12px;
+    cursor: pointer;
+    border-radius: 4px;
+    user-select: none;
+  }
 </style>
 </head>
 <body>
 <canvas id="canvas-bg"></canvas>
 <div id="zoom-overlay"></div>
-<div class="wrap">
+<button id="language-switcher" aria-label="Switch Language">العربية</button>
+<div class="wrap" id="hero-wrap" aria-live="polite" aria-atomic="true" aria-relevant="additions">
   <div class="headline" id="headline">Belevision</div>
-  <div class="sub">خير الكلام ما قل ودل — بوابات إلى عوالم بيلي</div>
-  <div id="portal-container">
-    <div class="portal-item" data-target="texts.html" tabindex="0">قراءات</div>
-    <div class="portal-item" data-target="shadows.html" tabindex="0">ظلال</div>
-    <div class="portal-item" data-target="characters.html" tabindex="0">شخصيات</div>
-  </div>
+  <div class="sub" id="sub">The best words are few — Gateways to Bili’s worlds</div>
+  <nav id="portal-container" role="navigation" aria-label="Site Gateways">
+  <div class="portal-item" data-target="notbook.html" tabindex="0" role="link" aria-label="Readings Gateway" data-key="readings">Readings</div>
+    <div class="portal-item" data-target="shadows.html" tabindex="0" role="link" aria-label="Shadows Gateway" data-key="shadows">Shadows</div>
+    <div class="portal-item" data-target="characters.html" tabindex="0" role="link" aria-label="Characters Gateway" data-key="characters">Characters</div>
+  </nav>
 </div>
 <footer>
-  <a href="#">تواصل</a>
-  <a href="#">سياسة الخصوصية</a>
-  <a href="#">بيان النشر</a>
+  <a href="#" tabindex="0" data-key="contact">Contact</a>
+  <a href="#" tabindex="0" data-key="privacy">Privacy Policy</a>
+  <a href="#" tabindex="0" data-key="publishing">Publishing Statement</a>
   <span>© 2025 Belevision</span>
 </footer>
 
-<script src="https://cdn.jsdelivr.net/npm/three@0.155.0/build/three.min.js"></script>
-<script>
-const canvas = document.getElementById('canvas-bg');
-const overlay = document.getElementById('zoom-overlay');
-const scene = new THREE.Scene();
-scene.fog = new THREE.FogExp2(0x000000,0.00015);
+<script type="module">
+  import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.155.0/build/three.module.js';
+  import { FontLoader } from 'https://cdn.jsdelivr.net/npm/three@0.155.0/examples/jsm/loaders/FontLoader.js';
+  import { TextGeometry } from 'https://cdn.jsdelivr.net/npm/three@0.155.0/examples/jsm/geometries/TextGeometry.js';
+  // GSAP is loaded globally by the UMD <script> in the document head; use the global `gsap` variable
 
-const camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight,0.1,10000);
-camera.position.z = 0;
-const renderer = new THREE.WebGLRenderer({canvas, alpha:true, antialias:true});
-renderer.setSize(window.innerWidth, window.innerHeight);
-renderer.setPixelRatio(window.devicePixelRatio);
+  // جميع المتغيرات الحالية: canvas, heroWrap, portalItems, languageSwitcher, headline, sub, footerLinks
+  const canvas = document.getElementById('canvas-bg');
+  const overlay = document.getElementById('zoom-overlay');
+  const heroWrap = document.getElementById('hero-wrap');
+  const portalItems = document.querySelectorAll('.portal-item');
+  const languageSwitcher = document.getElementById('language-switcher');
+  const headline = document.getElementById('headline');
+  const sub = document.getElementById('sub');
+  const footerLinks = document.querySelectorAll('footer a');
 
-const pointSprite = new THREE.TextureLoader().load('https://threejs.org/examples/textures/sprites/disc.png');
+  // Translations
+  const translations = {
+    en: {
+      headline: "Belevision",
+      sub: "The best words are few — Gateways to Bele's worlds",
+      readings: "Notebook",
+      shadows: "Snapshots",
+      characters: "Characters",
+      contact: "Contact",
+      privacy: "Privacy Policy",
+      publishing: "Publishing Statement",
+      languageSwitcherLabel: "العربية"
+    },
+    ar: {
+      headline: "بِيلِفِجِن",
+      sub: "أفضل الكلمات أقلّها — بوابات لعوالم بيلي",
+      readings: "دفتر",
+      shadows: "لقطات",
+      characters: "شخصيات",
+      contact: "اتصل",
+      privacy: "سياسة الخصوصية",
+      publishing: "بيان النشر",
+      languageSwitcherLabel: "English"
+    }
+  };
 
-function createStars(count, zRange){
-  const geometry = new THREE.BufferGeometry();
-  const positions = [];
-  const sizes = [];
-  const speeds = [];
-  const phases = [];
+  // Current language state
+  let currentLang = 'en';
 
-    for(let i=0;i<count;i++){
-    positions.push((Math.random()-0.5)*4000,(Math.random()-0.5)*4000,-Math.random()*zRange);
-      sizes.push(Math.random()*2.6+1.4);
-    speeds.push(Math.random()*0.12+0.05); 
-    phases.push(Math.random()*Math.PI*2);
+  // Update text content based on language
+  function updateLanguage(lang) {
+    currentLang = lang;
+    headline.textContent = translations[lang].headline;
+    sub.textContent = translations[lang].sub;
+    portalItems.forEach(item => {
+      const key = item.getAttribute('data-key');
+      if (translations[lang][key]) {
+        item.textContent = translations[lang][key];
+        item.setAttribute('aria-label', translations[lang][key] + ' Gateway');
+      }
+    });
+    footerLinks.forEach(link => {
+      const key = link.getAttribute('data-key');
+      if (translations[lang][key]) {
+        link.textContent = translations[lang][key];
+      }
+    });
+    languageSwitcher.textContent = translations[lang].languageSwitcherLabel;
+
+    // Adjust direction for Arabic
+    if(lang === 'ar'){
+      document.documentElement.lang = 'ar';
+      document.documentElement.dir = 'rtl';
+      heroWrap.style.textAlign = 'center';
+    } else {
+      document.documentElement.lang = 'en';
+      document.documentElement.dir = 'ltr';
+      heroWrap.style.textAlign = 'center';
+    }
   }
 
-  geometry.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));
-  geometry.setAttribute('size',new THREE.Float32BufferAttribute(sizes,1));
-  geometry.setAttribute('speed',new THREE.Float32BufferAttribute(speeds,1));
-  geometry.setAttribute('phase',new THREE.Float32BufferAttribute(phases,1));
+  languageSwitcher.addEventListener('click', () => {
+    const newLang = currentLang === 'en' ? 'ar' : 'en';
+    // full-page fade-out, swap language, then fade-in
+    gsap.to(document.body, {
+      opacity: 0,
+      duration: 0.5,
+      onComplete: () => {
+        updateLanguage(newLang);
+        gsap.to(document.body, { opacity: 1, duration: 0.5 });
+      }
+    });
+  });
 
-  const material = new THREE.ShaderMaterial({
-    uniforms:{
-      time:{value:0},
-      pointTexture:{value:pointSprite}
+  updateLanguage(currentLang);
+
+  // إنشاء المشهد والكاميرا والrenderer
+  const scene = new THREE.Scene();
+  scene.fog = new THREE.FogExp2(0x000000, 0.0001);
+  const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 10000);
+  camera.position.set(0,0,120);
+  camera.lookAt(0,0,0);
+  const renderer = new THREE.WebGLRenderer({ canvas, alpha:true, antialias:true });
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.setPixelRatio(window.devicePixelRatio);
+
+  // Lights
+  const ambient = new THREE.AmbientLight(0xffffff, 0.6);
+  scene.add(ambient);
+  const directional = new THREE.DirectionalLight(0xfff0e0, 0.45);
+  directional.position.set(100,200,100);
+  scene.add(directional);
+
+  // Sprite fallback
+  const fallbackSize = 4;
+  const fbData = new Uint8Array(fallbackSize*fallbackSize*4);
+  for (let i=0; i<fbData.length; i+=4) { fbData[i]=fbData[i+1]=fbData[i+2]=255; fbData[i+3]=255; }
+  const fallbackSprite = new THREE.DataTexture(fbData, fallbackSize, fallbackSize, THREE.RGBAFormat);
+  fallbackSprite.needsUpdate = true;
+  let pointSprite = fallbackSprite;
+
+  const spriteLoader = new THREE.TextureLoader();
+  spriteLoader.crossOrigin = '';
+  spriteLoader.load(
+    'https://threejs.org/examples/textures/sprites/disc.png',
+    tex => {
+      pointSprite = tex;
+      if (typeof starLayers !== 'undefined' && Array.isArray(starLayers)) {
+        starLayers.forEach(layer => {
+          if (layer && layer.material && layer.material.uniforms && layer.material.uniforms.pointTexture) {
+            layer.material.uniforms.pointTexture.value = pointSprite;
+          }
+        });
+      }
     },
-    vertexShader:`attribute float size; attribute float phase; varying float vDepth; varying float vPhase; void main(){ vec4 mvPosition=modelViewMatrix*vec4(position,1.0); vDepth=-mvPosition.z; vPhase=phase; gl_PointSize=size*(220.0/vDepth); gl_Position=projectionMatrix*mvPosition;}`,
-  fragmentShader:`uniform sampler2D pointTexture; uniform float time; varying float vDepth; varying float vPhase; void main(){ vec4 texColor=texture2D(pointTexture,gl_PointCoord); float intensity=1.06/(0.05+vDepth*0.00062); intensity *= 0.78 + 0.28*sin(time*2.0+vPhase); intensity *= smoothstep(0.0, 800.0, vDepth); gl_FragColor=vec4(vec3(intensity), texColor.a);}`,
-    transparent:true, blending:THREE.AdditiveBlending, depthTest:false
-  });
+    undefined,
+    err => console.error('Star sprite failed to load:', err)
+  );
 
-  const stars = new THREE.Points(geometry,material);
-  scene.add(stars);
-  return stars;
-}
+  // Starfield parameters
+  const STARFIELD_PARAMS = [
+    { count: 2400, zRange: 700, sizeRange: [1.0, 2.2], speedRange: [0.06, 0.12], color: new THREE.Color(0xffd36f), brightnessMultiplier: 1.6 },
+    { count: 2000, zRange: 2800, sizeRange: [0.8, 1.8], speedRange: [0.03, 0.084], color: new THREE.Color(0xfff0c1), brightnessMultiplier: 1.45 },
+    { count: 1600, zRange: 4500, sizeRange: [0.5, 1.4], speedRange: [0.018, 0.048], color: new THREE.Color(0xd9d9d9), brightnessMultiplier: 1.35 },
+    { count: 1200, zRange: 6000, sizeRange: [0.3, 1.1], speedRange: [0.01, 0.026], color: new THREE.Color(0xa0a0a0), brightnessMultiplier: 1.25 }
+  ];
 
-const nearStars=createStars(1700,1000);
-const midStars=createStars(1100,3000);
-const farStars=createStars(800,5000);
-
-// ===== Nebula =====
-const nebulaGeometry=new THREE.PlaneGeometry(7000,7000,32,32);
-const nebulaMaterial=new THREE.ShaderMaterial({
-  uniforms:{time:{value:0}},
-  vertexShader:`varying vec2 vUv; void main(){ vUv=uv; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0); }`,
-  fragmentShader:`varying vec2 vUv; uniform float time; void main(){ float n=sin(vUv.x*6.0 + time*0.04)*cos(vUv.y*6.0 + time*0.06); vec3 color=vec3(0.01,0.01,0.02)+vec3(n*0.04,n*0.02,n*0.04); gl_FragColor=vec4(color,0.45);}`,
-  transparent:true, blending:THREE.AdditiveBlending, depthTest:false
-});
-const nebula=new THREE.Mesh(nebulaGeometry,nebulaMaterial);
-nebula.position.z=-1800;
-scene.add(nebula);
-
-// ===== Animate =====
-let lastTime=0;
-function animate(time){
-  const delta=time-lastTime;
-  lastTime=time;
-  requestAnimationFrame(animate);
-  nebulaMaterial.uniforms.time.value=time*0.001;
-
-  [nearStars,midStars,farStars].forEach(layer=>{
-    const positions=layer.geometry.attributes.position.array;
-    const speeds=layer.geometry.attributes.speed.array;
-    const count=positions.length/3;
-    for(let i=0;i<count;i++){
-      let idx=i*3;
-      positions[idx+2]+=speeds[i]*1.2; 
-      if(positions[idx+2]>50){
-        positions[idx]=(Math.random()-0.5)*4000;
-        positions[idx+1]=(Math.random()-0.5)*4000;
-        positions[idx+2]=-5000;
+  // Create stars
+  function createStars({ count, zRange, sizeRange, speedRange, color, brightnessMultiplier }) {
+    const geometry = new THREE.BufferGeometry();
+    const positions = new Float32Array(count * 3);
+    const sizes = new Float32Array(count);
+    const speeds = new Float32Array(count);
+    const phases = new Float32Array(count);
+    const colors = new Float32Array(count * 3);
+    const brightnesses = new Float32Array(count);
+    const dirX = new Float32Array(count);
+    const dirY = new Float32Array(count);
+    const burstUntil = new Float32Array(count);
+    for (let i = 0; i < count; i++) {
+      positions[i * 3] = (Math.random() - 0.5) * 4000;
+      positions[i * 3 + 1] = (Math.random() - 0.5) * 4000;
+      positions[i * 3 + 2] = -Math.random() * zRange;
+      sizes[i] = THREE.MathUtils.lerp(sizeRange[0], sizeRange[1], Math.random());
+      speeds[i] = THREE.MathUtils.lerp(speedRange[0], speedRange[1], Math.random()) * (1.05 + Math.random() * 0.25);
+      phases[i] = Math.random() * Math.PI * 2;
+      const b = brightnessMultiplier * (0.8 + Math.random() * 1.8);
+      brightnesses[i] = b;
+      colors[i * 3] = color.r * b;
+      colors[i * 3 + 1] = color.g * b;
+      colors[i * 3 + 2] = color.b * b;
+      const angle = Math.random() * Math.PI * 2;
+      const lateral = Math.random() < 0.08 ? (0.18 + Math.random() * 0.9) : (Math.random() * 0.12);
+      dirX[i] = Math.cos(angle) * lateral;
+      dirY[i] = Math.sin(angle) * lateral;
+      burstUntil[i] = 0;
+      if (Math.random() < 0.2) {
+        burstUntil[i] = performance.now() + 300 + Math.random() * 1200;
       }
     }
-    layer.geometry.attributes.position.needsUpdate=true;
-    layer.material.uniforms.time.value=time*0.001;
-  });
+    geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    geometry.setAttribute('size', new THREE.BufferAttribute(sizes, 1));
+    geometry.setAttribute('speed', new THREE.BufferAttribute(speeds, 1));
+    geometry.setAttribute('phase', new THREE.BufferAttribute(phases, 1));
+    geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+    geometry.setAttribute('brightness', new THREE.BufferAttribute(brightnesses, 1));
+    geometry.setAttribute('dirX', new THREE.BufferAttribute(dirX, 1));
+    geometry.setAttribute('dirY', new THREE.BufferAttribute(dirY, 1));
+    geometry.setAttribute('burstUntil', new THREE.BufferAttribute(burstUntil, 1));
+    const material = new THREE.ShaderMaterial({
+      uniforms: {
+        time: { value: 0 },
+        pointTexture: { value: pointSprite },
+        twinkleBoost: { value: 1.0 },
+      },
+      vertexShader: `
+        attribute float size;
+        attribute float phase;
+        attribute vec3 color;
+        attribute float brightness;
+        attribute float dirX;
+        attribute float dirY;
+        attribute float burstUntil;
+        varying float vDepth;
+        varying float vPhase;
+        varying vec3 vColor;
+        varying float vBrightness;
+        void main() {
+          vec3 pos = position;
+          pos.x += dirX * 10.0;
+          pos.y += dirY * 10.0;
+          vec4 mvPosition = modelViewMatrix * vec4(pos, 1.0);
+          vDepth = -mvPosition.z;
+          vPhase = phase;
+          vColor = color;
+          vBrightness = brightness;
+          float safeDepth = max(1.0, vDepth);
+          float computedSize = size * (200.0 / safeDepth);
+          computedSize = clamp(computedSize, 1.0, 140.0);
+          gl_PointSize = computedSize;
+          gl_Position = projectionMatrix * mvPosition;
+        }
+      `,
+      fragmentShader: `
+        uniform sampler2D pointTexture;
+        uniform float time;
+        uniform float twinkleBoost;
+        varying float vDepth;
+        varying float vPhase;
+        varying vec3 vColor;
+        varying float vBrightness;
+        void main() {
+          vec4 texColor = texture2D(pointTexture, gl_PointCoord);
+          float intensity = 1.2 / (0.05 + vDepth * 0.0005);
+          intensity *= (0.6 + 0.6 * sin(time * 6.0 + vPhase) * twinkleBoost);
+          intensity *= smoothstep(0.0, 800.0, vDepth);
+          intensity *= vBrightness;
+          vec3 col = vColor * intensity;
+          gl_FragColor = vec4(col, texColor.a * intensity);
+        }
+      `,
+      transparent: true,
+      blending: THREE.AdditiveBlending,
+      depthTest: false
+    });
+    if (material.uniforms && material.uniforms.pointTexture) material.uniforms.pointTexture.value = pointSprite;
+    const stars = new THREE.Points(geometry, material);
+    scene.add(stars);
+    return stars;
+  }
+  const starLayers = STARFIELD_PARAMS.map(params => createStars(params));
 
-  renderer.render(scene,camera);
-}
-animate();
+  // FontLoader + TextGeometry
+  const loader = new FontLoader();
+  loader.load(
+    'https://threejs.org/examples/fonts/helvetiker_regular.typeface.json',
+    font => {
+      const textGeo = new TextGeometry('Belevision', {
+        font: font,
+        size: 12,
+        height: 3,
+        curveSegments: 12,
+        bevelEnabled: true,
+        bevelThickness: 0.8,
+        bevelSize: 0.6,
+        bevelSegments: 3
+      });
+      textGeo.center();
+      const textMaterial = new THREE.MeshStandardMaterial({ color:0xffd36f, metalness:0.3, roughness:0.4, transparent:true });
+      const textMesh = new THREE.Mesh(textGeo, textMaterial);
+      textMesh.position.z = -50;
+      scene.add(textMesh);
+      gsap.fromTo(textMaterial, {opacity:0}, {opacity:1, duration:1.5, ease:'power2.out'});
+    },
+    undefined,
+    err => console.error('Font load failed:', err)
+  );
 
-// ===== Resize =====
-window.addEventListener('resize',()=>{
-  camera.aspect=window.innerWidth/window.innerHeight;
-  camera.updateProjectionMatrix();
-  renderer.setSize(window.innerWidth,window.innerHeight);
-});
-
-// ===== Zoom effect محسّن =====
-document.querySelectorAll('.portal-item').forEach(item=>{
-  item.addEventListener('click',()=>{
-    const rect = item.getBoundingClientRect();
-    const targetX = rect.left + rect.width/2 - window.innerWidth/2;
-    const targetY = -(rect.top + rect.height/2 - window.innerHeight/2);
-
-    const duration = 600;
-    const start = performance.now();
-    const startZ = camera.position.z;
-    const zoomDistance = 800; // المسافة التي تتحرك فيها الكاميرا
-
-    function zoomAnimate(now){
-      const t = Math.min((now - start)/duration,1);
-      camera.position.z = startZ + zoomDistance * t;
-      camera.position.x = targetX * 0.1 * t; // انزلاق خفيف على محور X
-      camera.position.y = targetY * 0.1 * t; // انزلاق خفيف على محور Y
-      if(t < 1){
-        requestAnimationFrame(zoomAnimate);
-      } else {
-        overlay.style.opacity = 1;
-        overlay.style.pointerEvents = 'auto';
-        setTimeout(()=>{ window.location.href = item.dataset.target; },200);
-      }
+  // Reduce star layer opacity, boost color
+  starLayers.forEach(layer => {
+    if (layer && layer.material) layer.material.opacity = 0.75;
+    const colorAttr = layer.geometry.attributes.color;
+    if (colorAttr && colorAttr.array) {
+      for (let i = 0; i < colorAttr.array.length; i++) colorAttr.array[i] = colorAttr.array[i] * 1.4;
+      colorAttr.needsUpdate = true;
     }
-    requestAnimationFrame(zoomAnimate);
   });
-});
 
-// Restore clean state when page is shown (handles back/forward cache and back navigation)
-window.addEventListener('pageshow', (event) => {
-  try{
-    // If page was restored from bfcache or loaded via back/forward, ensure overlay is hidden
-    overlay.style.opacity = 0;
-    overlay.style.pointerEvents = 'none';
-    // reset camera transform to initial
-    if(camera){ camera.position.set(0,0,0); camera.lookAt(0,0,0); camera.updateProjectionMatrix && camera.updateProjectionMatrix(); }
-    // force a single render so the canvas updates
-    if(typeof renderer !== 'undefined' && renderer && scene && camera) renderer.render(scene, camera);
-  }catch(err){ console.warn('pageshow restore failed', err); }
-});
+  // Nebula
+  const nebulaGeometry = new THREE.PlaneGeometry(7000, 7000, 128, 128);
+  const nebulaMaterial = new THREE.ShaderMaterial({
+    uniforms: { time: { value: 0 } },
+    vertexShader: `
+      varying vec2 vUv;
+      void main() {
+        vUv = uv;
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+      }
+    `,
+    fragmentShader: `
+      varying vec2 vUv;
+      uniform float time;
+      float noise(vec2 p){
+        return fract(sin(dot(p, vec2(12.9898,78.233))) * 43758.5453);
+      }
+      void main() {
+        float n = 0.0;
+        float scale = 8.0;
+        for(int i = 1; i <= 6; i++) {
+          n += (noise(vUv * scale * float(i) + time * 0.02 * float(i)) - 0.5) / float(i);
+        }
+        n = smoothstep(-0.12, 0.18, n);
+        vec3 baseColor = vec3(0.03, 0.02, 0.05);
+        vec3 color = baseColor + vec3(n * 0.18, n * 0.08, n * 0.22);
+        float vMask = smoothstep(0.15, 0.95, vUv.y) * (1.0 - smoothstep(0.05, 0.95, abs(vUv.x - 0.5)));
+        float alpha = 0.75 * vMask * clamp(n + 0.15, 0.0, 1.0);
+        gl_FragColor = vec4(color, alpha);
+      }
+    `,
+    transparent: true,
+    blending: THREE.AdditiveBlending,
+    depthTest: false
+  });
+  const nebula = new THREE.Mesh(nebulaGeometry, nebulaMaterial);
+  nebula.position.z = -1900;
+  scene.add(nebula);
+  if (nebulaMaterial) {
+    if (nebulaMaterial.uniforms && nebulaMaterial.uniforms.time) nebulaMaterial.uniforms.time.value = 0;
+    nebulaMaterial.transparent = true;
+    nebulaMaterial.blending = THREE.AdditiveBlending;
+    nebulaMaterial.opacity = 0.6;
+  }
+
+  // Variables for parallax effect
+  let mouseX = 0, mouseY = 0;
+  let targetX = 0, targetY = 0;
+  const parallaxFactor = 0.03;
+
+  // Animate loop
+  let lastTime = 0;
+  function animate(time = 0) {
+    requestAnimationFrame(animate);
+    const delta = time - lastTime;
+    lastTime = time;
+    nebulaMaterial.uniforms.time.value = time * 0.001;
+    starLayers.forEach(layer => {
+      const positions = layer.geometry.attributes.position.array;
+      const speeds = layer.geometry.attributes.speed.array;
+      const phases = layer.geometry.attributes.phase.array;
+      const sizes = layer.geometry.attributes.size.array;
+      const dirX = layer.geometry.attributes.dirX ? layer.geometry.attributes.dirX.array : null;
+      const dirY = layer.geometry.attributes.dirY ? layer.geometry.attributes.dirY.array : null;
+      const burstUntil = layer.geometry.attributes.burstUntil ? layer.geometry.attributes.burstUntil.array : null;
+      const count = positions.length / 3;
+      let globalBoost = 1.0;
+      if (layer.material && layer.material.uniforms && layer.material.uniforms.twinkleBoost) {
+        globalBoost = 1.0 + 0.8 * Math.sin(time * 0.0005 + Math.random() * 10);
+        layer.material.uniforms.twinkleBoost.value = globalBoost;
+      }
+      const now = performance.now();
+      for (let i = 0; i < count; i++) {
+        const idx = i * 3;
+        let forwardSpeed = speeds[i] * 1.3;
+        if (burstUntil && burstUntil[i] > now) {
+          forwardSpeed *= 2.4;
+        } else if (burstUntil && Math.random() < 0.0005) {
+          burstUntil[i] = now + 300 + Math.random() * 800;
+        }
+        positions[idx + 2] += forwardSpeed;
+        if (dirX && dirY) {
+          positions[idx] += dirX[i] * (1.0 + Math.min(1.5, Math.abs(positions[idx + 2]) / 2000));
+          positions[idx + 1] += dirY[i] * (1.0 + Math.min(1.5, Math.abs(positions[idx + 2]) / 2000));
+        }
+        if (positions[idx + 2] > 50) {
+          positions[idx] = (Math.random() - 0.5) * 4000;
+          positions[idx + 1] = (Math.random() - 0.5) * 4000;
+          positions[idx + 2] = -5000 - Math.random() * 200;
+          speeds[i] = THREE.MathUtils.lerp(0.008, 0.1, Math.random());
+          phases[i] = Math.random() * Math.PI * 2;
+          sizes[i] = THREE.MathUtils.lerp(0.3, 2.0, Math.random());
+          if (burstUntil) burstUntil[i] = Math.random() < 0.12 ? now + 200 + Math.random() * 1000 : 0;
+        }
+      }
+      layer.geometry.attributes.position.needsUpdate = true;
+      layer.geometry.attributes.speed.needsUpdate = true;
+      layer.geometry.attributes.phase.needsUpdate = true;
+      layer.geometry.attributes.size.needsUpdate = true;
+      if (layer.geometry.attributes.dirX) layer.geometry.attributes.dirX.needsUpdate = false;
+      if (layer.geometry.attributes.dirY) layer.geometry.attributes.dirY.needsUpdate = false;
+      if (layer.geometry.attributes.burstUntil) layer.geometry.attributes.burstUntil.needsUpdate = true;
+      layer.material.uniforms.time.value = time * 0.001;
+    });
+    targetX += (mouseX - targetX) * 0.08;
+    targetY += (mouseY - targetY) * 0.08;
+    camera.position.x = targetX * parallaxFactor;
+    camera.position.y = targetY * parallaxFactor;
+    renderer.render(scene, camera);
+  }
+  animate();
+
+  // Resize handler
+  function onResize() {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+  }
+  window.addEventListener('resize', onResize);
+
+  // Mouse move handler for parallax
+  window.addEventListener('mousemove', (e) => {
+    mouseX = (e.clientX - window.innerWidth / 2);
+    mouseY = (window.innerHeight / 2 - e.clientY);
+  });
+
+  // Fade in hero content on load using GSAP
+  window.addEventListener('load', () => {
+    gsap.to(heroWrap, { opacity: 1, duration: 1.6, ease: 'power2.out' });
+    gsap.fromTo(portalItems, 
+      { opacity: 0, scale: 0.85 }, 
+      { opacity: 1, scale: 1, duration: 0.6, ease: 'back.out(1.7)', stagger: 0.15, delay: 1 }
+    );
+  });
+
+  // Zoom effect with smooth easing on portal click
+  portalItems.forEach(item => {
+    item.addEventListener('click', () => {
+      if (overlay.style.pointerEvents === 'auto') return;
+      const rect = item.getBoundingClientRect();
+      const targetX = rect.left + rect.width / 2 - window.innerWidth / 2;
+      const targetY = -(rect.top + rect.height / 2 - window.innerHeight / 2);
+      const startZ = camera.position.z;
+      const zoomDistance = 850;
+      const zoomTimeline = gsap.timeline({
+        defaults: { ease: "power3.inOut" },
+        onStart: () => {
+          overlay.style.pointerEvents = 'none';
+        },
+        onComplete: () => {
+          overlay.style.opacity = '1';
+          overlay.style.pointerEvents = 'auto';
+          setTimeout(() => {
+            window.location.href = item.dataset.target;
+          }, 220);
+        }
+      });
+      zoomTimeline.to(camera.position, {
+        duration: 0.8,
+        z: startZ + zoomDistance,
+        x: targetX * 0.1,
+        y: targetY * 0.1,
+        onUpdate: () => {
+          camera.updateProjectionMatrix();
+        }
+      });
+    });
+    item.addEventListener('keydown', e => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        item.click();
+      }
+    });
+  });
+
+  window.addEventListener('pageshow', () => {
+    try {
+      overlay.style.opacity = '0';
+      overlay.style.pointerEvents = 'none';
+      camera.position.set(0, 0, 0);
+      camera.lookAt(0, 0, 0);
+      camera.updateProjectionMatrix();
+      renderer.render(scene, camera);
+    } catch (err) {
+      console.warn('pageshow restore failed', err);
+    }
+  });
 </script>
 </body>
 </html>
