@@ -1,310 +1,549 @@
 <!DOCTYPE html>
 <html lang="ar">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Belevision — ظلال</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Belevision — معرض الصور GSAP</title>
 <style>
-:root{--bg-dark:#000000;--text:#ffffff;--accent:#FFD36F;--header-height:80px}
-*{box-sizing:border-box}
-html,body{height:100%;margin:0;background:var(--bg-dark);color:var(--text);font-family:'IBM Plex Sans',sans-serif;}
-.site-header{position:fixed;left:0;top:0;width:100%;height:var(--header-height);display:flex;align-items:center;justify-content:center;z-index:1000;background:var(--bg-dark)}
-.site-logo{font-weight:700;color:var(--accent);font-size:1.5rem;text-decoration:none}
-body{padding-top:var(--header-height);} 
-#canvas-bg{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;pointer-events:none}
-.main-wrap{position:relative;z-index:2;min-height:calc(100vh - var(--header-height));}
-.gallery{display:block;overflow-y:auto;scroll-snap-type:y mandatory;-webkit-overflow-scrolling:touch;height:calc(100vh - var(--header-height));scroll-behavior:smooth}
-.slide{height:100vh;display:grid;grid-template-rows:auto 1fr;gap:16px;padding:60px 40px 40px;scroll-snap-align:start;position:relative;align-items:start}
-.caption{background:rgba(0,0,0,0.45);padding:20px;border-radius:8px;text-align:right}
-.caption h3{font-size:2rem;color:var(--accent);margin-bottom:12px}
-.caption p{font-size:1.1rem;color:#ddd;line-height:1.5}
-.images{display:block;position:relative;height:100%;margin-top:8px}
-/* Collage tiles (free-form) */
-.collage{position:relative;width:100%;height:100%;overflow:visible}
-.tile{position:absolute;will-change:transform,opacity;cursor:pointer;border-radius:12px;overflow:hidden;box-shadow:0 18px 60px rgba(0,0,0,0.55);transition:transform 420ms cubic-bezier(.2,.9,.3,1),opacity 420ms ease}
-.tile img{display:block;width:100%;height:100%;object-fit:cover}
-.slide.in-view .tile{opacity:1;transform:translateY(0) scale(1)}
-.tile.small{width:140px;height:180px}
-.tile.medium{width:220px;height:260px}
-.tile.large{width:360px;height:260px}
-.tile.xlarge{width:420px;height:320px}
-.tile:hover{transform:translateY(-8px) scale(1.02);z-index:30}
-
-@media (max-width:900px){
-  .tile.large,.tile.xlarge{width:260px;height:180px}
+:root{
+  --bg-dark:#000;
+  --text:#fff;
+  --accent:#FFD36F;
+  --header-height:80px;
 }
-.footer{position:fixed;right:18px;bottom:18px;z-index:60;color:rgba(255,255,255,0.6)}
-/* big preview */
-.big-preview{position:fixed;inset:0;z-index:220;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.86);backdrop-filter:blur(6px);opacity:0;transform:scale(0.98);transition:opacity 280ms cubic-bezier(.2,.9,.3,1),transform 280ms cubic-bezier(.2,.9,.3,1);pointer-events:none}
-.big-preview.is-open{opacity:1;transform:scale(1);pointer-events:auto}
-.big-preview__inner{max-width:86vw;max-height:86vh;display:flex;align-items:center;justify-content:center;overflow:hidden;border-radius:12px;box-shadow:0 30px 120px rgba(0,0,0,0.6);flex-direction:column}
-.big-preview__inner img{max-width:100%;max-height:100%;object-fit:contain}
-.big-preview__close{position:fixed;top:18px;right:18px;background:rgba(255,255,255,0.06);border:none;color:#fff;padding:8px 12px;border-radius:8px;font-size:18px;cursor:pointer}
-.big-preview__caption{margin-top:12px;color:rgba(255,255,255,0.95);font-size:1rem;text-align:center;max-width:86vw;padding:6px 12px}
-/* Swiper basic overrides */
-.thumbs-swiper{display:flex;justify-content:center;gap:10px;padding:18px 8px;max-width:100%;box-sizing:border-box}
-.thumbs-swiper .swiper-slide{width:80px;height:56px;opacity:0.7;border-radius:6px;overflow:hidden}
-.thumbs-swiper .swiper-slide-thumb-active{opacity:1;box-shadow:0 8px 30px rgba(0,0,0,0.6)}
-.thumbs-swiper img{width:100%;height:100%;object-fit:cover;display:block}
-.main-swiper{position:relative}
-.main-swiper .swiper-slide{display:block}
-</style>
+*{box-sizing:border-box;margin:0;padding:0;}
+html,body{height:100%;font-family:'IBM Plex Sans',sans-serif;background:#000;color:#fff;overflow-x:hidden;}
+body{padding-top:var(--header-height);overscroll-behavior-y:contain;scroll-behavior:smooth}
+
+/* Header */
+.site-header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: var(--header-height);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent !important;   /* بدل اللون الأسود */
+  border-bottom: none !important;
+  box-shadow: none !important;
+  z-index: 1000;
+}
+/* Headline-inspired wordmark for header (uses homepage headline styling but scaled down) */
+.site-logo{
+  color:var(--text);
+  font-family:'Bradley Hand', cursive, 'IBM Plex Sans', sans-serif;
+  font-weight:700;
+  font-size:clamp(18px, 2.6vw, 28px);
+  text-decoration:none;
+  text-shadow: 0 0 6px #FFD36F, 0 0 12px rgba(255,211,111,0.7);
+  display:inline-flex;align-items:center;gap:10px;padding:6px 8px;border-radius:6px;
+}
+.site-logo .site-mark{width:28px;height:28px;background:linear-gradient(90deg,#FFD36F,#FFB66B);border-radius:50%;display:inline-block}
+.site-word{font-family:'Bradley Hand', cursive, 'IBM Plex Sans', sans-serif; font-weight:700; font-size:1.05em; color:var(--text)}
+
+/* Canvas background */
+#canvas-bg{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;pointer-events:none;}
+
+/* Main gallery: use page scrolling (body) so ScrollTrigger works with window */
+body{padding-top:var(--header-height);overscroll-behavior-y:contain;scroll-behavior:smooth;scroll-padding-top:var(--header-height)}
+main{position:relative;z-index:2; padding-bottom:260px}
+
+/* nicer scrollbar for WebKit (apply to document) */
+::-webkit-scrollbar{width:10px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.08);border-radius:8px}
+
+/* Stage: responsive grid, images auto-fill and auto-size, no fixed height, use aspect-ratio for consistency */
+/* Each stage fills the viewport, scroll-snap, grid fills entire area */
+/* 
+  Responsive stage grid: 
+    - Always fills viewport (100vh)
+    - Images are proportionally sized to fit within the grid, never overflowing viewport
+    - Uses grid-template-rows: repeat(auto-fill, 1fr) for dynamic row count
+    - Padding is included in sizing
+*/
+/* Stage: responsive grid, fills viewport, images scale to fit, no overflow */
+/* Images: responsive, fill cell, aspect-ratio for consistent sizing, floating animation works with dynamic sizing */
+/* Responsive images: fill grid cell, never overflow, scale with grid */
+  /* Masonry-style column layout (CSS columns) - simpler, responds to new items automatically */
+  .stage {
+    column-count: 4;      /* default columns on wide screens */
+    column-gap: 16px;     /* gap between columns */
+    margin: 40px auto;    /* vertical breathing and center the stage */
+    max-width: 1400px;    /* constrain very wide viewports */
+    padding: 8px 16px 40px;
+    box-sizing: border-box;
+    /* no scroll-snap for column masonry */
+  }
+
+  .stage img {
+    width: 100%;
+    display: block;
+    margin: 0 0 16px;
+    border-radius: 10px;
+    break-inside: avoid;
+    -webkit-column-break-inside: avoid;
+    object-fit: cover;
+    opacity: 0;
+  }
+
+  /* Responsive column counts */
+  @media (max-width: 1200px) { .stage { column-count: 3; } }
+  @media (max-width: 800px)  { .stage { column-count: 2; max-width: 1000px; } }
+  @media (max-width: 500px)  { .stage { column-count: 1; max-width: 100%; padding-left:12px; padding-right:12px; } }
+
+  .stage img.loaded {
+    opacity: 1;
+    transition: opacity .6s ease;
+  }
+
+/* Simple Lightbox Overlay: smooth fade-in/out, overlay fades in, image fades in via JS */
+/* Lightbox should always be on top of header */
+#lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 3000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+  background: linear-gradient(180deg, rgba(0,0,0,0.92), rgba(0,0,0,0.96));
+  transition: opacity 0.32s cubic-bezier(.4,0,.2,1);
+}
+#page-end-spacer{height:260px;pointer-events:none}
+
+/* When lightbox is open, prevent the header from intercepting pointer events */
+body.lightbox-open .site-header{ pointer-events: none; opacity: 0.95; }
+#lightbox.show {
+  opacity: 1;
+  pointer-events: auto;
+  transition: opacity 0.32s cubic-bezier(.4,0,.2,1);
+}
+#lightbox .lightbox-img {
+  max-width: 92vw;
+  max-height: 92vh;
+  object-fit: contain;
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.20);
+  background: #222;
+  display: block;
+}
 </style>
 </head>
 <body>
-  <header class="site-header" role="banner"><div class="site-logo">Belevision</div></header>
-  <canvas id="canvas-bg" aria-hidden="true"></canvas>
-  <div class="main-wrap">
-    <main id="mainRoot">
-        <!-- Swiper gallery: main + thumbs -->
-        <div class="gallery swiper-container">
-          <div class="swiper main-swiper">
-            <div class="swiper-wrapper">
-              <div class="swiper-slide">
-                <div class="caption"><h3>البورتريه الجديد</h3><p>حوّل صورك العادية إلى بورتريهات مذهلة بسهولة.</p></div>
-                <div class="images">
-                  <img src="https://picsum.photos/id/1015/1400/1000" alt="بورتريه 1" data-caption="بورتريه 1" tabindex="0">
-                  <img src="https://picsum.photos/id/1016/1400/1000" alt="بورتريه 2" data-caption="بورتريه 2" tabindex="0">
-                  <img src="https://picsum.photos/id/1022/1400/1000" alt="بورتريه 3" data-caption="بورتريه 3" tabindex="0">
-                  <img src="https://picsum.photos/id/1023/1400/1000" alt="بورتريه 4" data-caption="بورتريه 4" tabindex="0">
-                </div>
-              </div>
-
-              <div class="swiper-slide">
-                <div class="caption"><h3>أنماط فوتوغرافية</h3><p>اختر من أنماط ألوان متعددة لتخصيص صورك حسب ذوقك.</p></div>
-                <div class="images">
-                  <img src="https://picsum.photos/id/1017/1400/1000" alt="أنماط 1" data-caption="أنماط 1" tabindex="0">
-                  <img src="https://picsum.photos/id/1018/1400/1000" alt="أنماط 2" data-caption="أنماط 2" tabindex="0">
-                  <img src="https://picsum.photos/id/1019/1400/1000" alt="أنماط 3" data-caption="أنماط 3" tabindex="0">
-                  <img src="https://picsum.photos/id/1024/1400/1000" alt="أنماط 4" data-caption="أنماط 4" tabindex="0">
-                </div>
-              </div>
-
-              <div class="swiper-slide">
-                <div class="caption"><h3>التصوير الليلي</h3><p>التقط تفاصيل أكثر في ظروف الإضاءة المنخفضة باستخدام أوضاع الليل.</p></div>
-                <div class="images">
-                  <img src="https://picsum.photos/id/1020/1400/1000" alt="ليل 1" data-caption="ليل 1" tabindex="0">
-                  <img src="https://picsum.photos/id/1021/1400/1000" alt="ليل 2" data-caption="ليل 2" tabindex="0">
-                  <img src="https://picsum.photos/id/1014/1400/1000" alt="ليل 3" data-caption="ليل 3" tabindex="0">
-                  <img src="https://picsum.photos/id/1013/1400/1000" alt="ليل 4" data-caption="ليل 4" tabindex="0">
-                </div>
-              </div>
-
-              <div class="swiper-slide">
-                <div class="caption"><h3>فيديوهات احترافية</h3><p>سجّل فيديوهات بدقة عالية مع ثبات مذهل باستخدام أوضاع الفيديو المتقدمة.</p></div>
-                <div class="images">
-                  <img src="https://picsum.photos/id/1022/1400/1000" alt="فيديو 1" data-caption="فيديو 1" tabindex="0">
-                  <img src="https://picsum.photos/id/1023/1400/1000" alt="فيديو 2" data-caption="فيديو 2" tabindex="0">
-                  <img src="https://picsum.photos/id/1024/1400/1000" alt="فيديو 3" data-caption="فيديو 3" tabindex="0">
-                  <img src="https://picsum.photos/id/1025/1400/1000" alt="فيديو 4" data-caption="فيديو 4" tabindex="0">
-                </div>
-              </div>
-            </div>
-            <!-- navigation -->
-            <div class="swiper-button-next" aria-hidden="true"></div>
-            <div class="swiper-button-prev" aria-hidden="true"></div>
-          </div>
-
-          <!-- thumbs -->
-          <div class="thumbs-swiper swiper">
-            <div class="swiper-wrapper">
-              <div class="swiper-slide" role="button" aria-label="عرض البورتريه 1"><img src="https://picsum.photos/id/1015/300/200" alt="thumb 1"></div>
-              <div class="swiper-slide" role="button" aria-label="عرض البورتريه 2"><img src="https://picsum.photos/id/1017/300/200" alt="thumb 2"></div>
-              <div class="swiper-slide" role="button" aria-label="عرض البورتريه 3"><img src="https://picsum.photos/id/1020/300/200" alt="thumb 3"></div>
-              <div class="swiper-slide" role="button" aria-label="عرض البورتريه 4"><img src="https://picsum.photos/id/1022/300/200" alt="thumb 4"></div>
-            </div>
-          </div>
-        </div>
-    </main>
+<!-- Unified site header -->
+<header class="site-header" role="banner">
+  <div class="site-header__inner">
+    <a class="site-logo" href="index.html" aria-label="العودة إلى الصفحة الرئيسية">
+      <span class="site-word">Belevision</span>
+    </a>
   </div>
+</header>
+<canvas id="canvas-bg"></canvas>
 
-  <!-- Fullscreen preview overlay -->
-  <div id="bigPreview" aria-hidden="true" class="big-preview" role="dialog" aria-modal="true">
-    <button class="big-preview__close" aria-label="Close preview">✕</button>
-    <div class="big-preview__inner" role="document"></div>
+<main id="gallery">
+  <!-- Stage 1 -->
+  <div class="stage">
+  <img src="thumbnails/00567245-ABE5-4CE2-B856-B841E4AD9075_1_105_c.jpeg" data-src="Pics/00567245-ABE5-4CE2-B856-B841E4AD9075_1_105_c.jpeg" alt="صورة 1" class="lazy">
+  <img src="thumbnails/0237B5F8-1DE2-4B73-A5D2-E73B2AC3501C_1_105_c.jpeg" data-src="Pics/0237B5F8-1DE2-4B73-A5D2-E73B2AC3501C_1_105_c.jpeg" alt="صورة 2" class="lazy">
+  <img src="thumbnails/0AA9466A-3E00-4F98-BDB8-6504C14D9535_1_105_c.jpeg" data-src="Pics/0AA9466A-3E00-4F98-BDB8-6504C14D9535_1_105_c.jpeg" alt="صورة 3" class="lazy">
+  <img src="thumbnails/0E04ABB4-11A6-466D-BDDF-8FCC745461FD_1_105_c.jpeg" data-src="Pics/0E04ABB4-11A6-466D-BDDF-8FCC745461FD_1_105_c.jpeg" alt="صورة 4" class="lazy">
+  <img src="thumbnails/21C53E3E-31D5-4633-99A7-8C02261D2F70_1_105_c.jpeg" data-src="Pics/21C53E3E-31D5-4633-99A7-8C02261D2F70_1_105_c.jpeg" alt="صورة 5" class="lazy large">
+  <img src="thumbnails/34F160DC-9A01-4543-914B-690F6F34E9CD_1_105_c.jpeg" data-src="Pics/34F160DC-9A01-4543-914B-690F6F34E9CD_1_105_c.jpeg" alt="صورة 6" class="lazy">
+  <img src="thumbnails/3684802D-B09A-40A2-B688-7E6193D2AFC8_1_105_c.jpeg" data-src="Pics/3684802D-B09A-40A2-B688-7E6193D2AFC8_1_105_c.jpeg" alt="صورة 7" class="lazy wide">
+  <img src="thumbnails/57E1447E-6DDA-4BDA-B377-9FC2F6B61BE6_1_105_c.jpeg" data-src="Pics/57E1447E-6DDA-4BDA-B377-9FC2F6B61BE6_1_105_c.jpeg" alt="صورة 8" class="lazy">
+  <img src="thumbnails/5A27E161-B010-438B-ABE3-BC63092A7200_1_105_c.jpeg" data-src="Pics/5A27E161-B010-438B-ABE3-BC63092A7200_1_105_c.jpeg" alt="صورة 9" class="lazy">
+  <img src="thumbnails/5DF57B2A-CA2A-481D-8363-3C493FEDE46A_1_105_c.jpeg" data-src="Pics/5DF57B2A-CA2A-481D-8363-3C493FEDE46A_1_105_c.jpeg" alt="صورة 10" class="lazy">
+  <img src="thumbnails/637854B8-0C52-4385-B1F9-78380885600F_4_5005_c.jpeg" data-src="Pics/637854B8-0C52-4385-B1F9-78380885600F_4_5005_c.jpeg" alt="صورة 11" class="lazy">
+  <img src="thumbnails/68E83A3E-B848-42D2-BBEA-F89C1F2BD18B_1_105_c.jpeg" data-src="Pics/68E83A3E-B848-42D2-BBEA-F89C1F2BD18B_1_105_c.jpeg" alt="صورة 12" class="lazy">
   </div>
+  <!-- Stage 3: additional local images from Pics/ -->
+  <div class="stage">
+  <img src="thumbnails/D64A8309-BE55-45EA-9FF5-7EC3669A10C1_1_105_c.jpeg" data-src="Pics/D64A8309-BE55-45EA-9FF5-7EC3669A10C1_1_105_c.jpeg" alt="صورة 25" class="lazy">
+  <img src="thumbnails/EAD63F0F-0A08-4CF9-8034-A44449415513_1_105_c.jpeg" data-src="Pics/EAD63F0F-0A08-4CF9-8034-A44449415513_1_105_c.jpeg" alt="صورة 26" class="lazy">
+  <img src="thumbnails/EE61001F-5BA5-4E5F-8CC5-69C548C993BB_1_105_c.jpeg" data-src="Pics/EE61001F-5BA5-4E5F-8CC5-69C548C993BB_1_105_c.jpeg" alt="صورة 27" class="lazy">
+  <img src="thumbnails/F0E24295-617E-4817-A316-EEB435BB210A_1_105_c.jpeg" data-src="Pics/F0E24295-617E-4817-A316-EEB435BB210A_1_105_c.jpeg" alt="صورة 28" class="lazy">
+  <img src="thumbnails/F7E37445-17F7-4BA3-B589-C76D4ACBF2E0_1_105_c.jpeg" data-src="Pics/F7E37445-17F7-4BA3-B589-C76D4ACBF2E0_1_105_c.jpeg" alt="صورة 29" class="lazy">
+  <img src="thumbnails/F8317FBF-DFE4-43D2-8521-DA4368F9800E_1_105_c.jpeg" data-src="Pics/F8317FBF-DFE4-43D2-8521-DA4368F9800E_1_105_c.jpeg" alt="صورة 30" class="lazy">
+  <img src="thumbnails/FD417B31-D5E3-4653-9CE4-EB518448418C_1_105_c.jpeg" data-src="Pics/FD417B31-D5E3-4653-9CE4-EB518448418C_1_105_c.jpeg" alt="صورة 31" class="lazy">
+  <img src="thumbnails/637854B8-0C52-4385-B1F9-78380885600F_4_5005_c.jpeg" data-src="Pics/637854B8-0C52-4385-B1F9-78380885600F_4_5005_c.jpeg" alt="صورة 32" class="lazy">
+  </div>
+  <!-- Stage 2 -->
+  <div class="stage">
+  <img src="thumbnails/7275D664-4EF1-45E8-BB7F-5D05A5770683_1_105_c.jpeg" data-src="Pics/7275D664-4EF1-45E8-BB7F-5D05A5770683_1_105_c.jpeg" alt="صورة 13" class="lazy">
+  <img src="thumbnails/834EAD3A-4621-40E7-8364-59763F00AD01_1_105_c.jpeg" data-src="Pics/834EAD3A-4621-40E7-8364-59763F00AD01_1_105_c.jpeg" alt="صورة 14" class="lazy">
+  <img src="thumbnails/83682745-9F21-4EC1-BBFC-B4419B8249F8_1_105_c.jpeg" data-src="Pics/83682745-9F21-4EC1-BBFC-B4419B8249F8_1_105_c.jpeg" alt="صورة 15" class="lazy">
+  <img src="thumbnails/876D0489-365A-4CB2-9497-688440CBED15_1_105_c.jpeg" data-src="Pics/876D0489-365A-4CB2-9497-688440CBED15_1_105_c.jpeg" alt="صورة 16" class="lazy">
+  <img src="thumbnails/90FF6F0F-2D5E-4DF3-B561-0E8281D73178_1_105_c.jpeg" data-src="Pics/90FF6F0F-2D5E-4DF3-B561-0E8281D73178_1_105_c.jpeg" alt="صورة 17" class="lazy large">
+  <img src="thumbnails/91BFCFB6-625A-40AB-B45C-010405D3050D_1_105_c.jpeg" data-src="Pics/91BFCFB6-625A-40AB-B45C-010405D3050D_1_105_c.jpeg" alt="صورة 18" class="lazy">
+  <img src="thumbnails/949A9DAD-A8E1-468D-A23E-8B313332FE24_1_105_c.jpeg" data-src="Pics/949A9DAD-A8E1-468D-A23E-8B313332FE24_1_105_c.jpeg" alt="صورة 19" class="lazy wide">
+  <img src="thumbnails/94E5EE6A-6D95-4370-B822-BC524FA98F62_1_105_c.jpeg" data-src="Pics/94E5EE6A-6D95-4370-B822-BC524FA98F62_1_105_c.jpeg" alt="صورة 20" class="lazy">
+  <img src="thumbnails/A8C9453A-F48D-4012-B1CC-93E70E0B951E_1_105_c.jpeg" data-src="Pics/A8C9453A-F48D-4012-B1CC-93E70E0B951E_1_105_c.jpeg" alt="صورة 21" class="lazy">
+  <img src="thumbnails/AB320E20-53F4-4FC3-A663-AADEE0A799E0_1_105_c.jpeg" data-src="Pics/AB320E20-53F4-4FC3-A663-AADEE0A799E0_1_105_c.jpeg" alt="صورة 22" class="lazy">
+  <img src="thumbnails/B6CD6328-D343-42A9-8ADF-545441B27709_1_105_c.jpeg" data-src="Pics/B6CD6328-D343-42A9-8ADF-545441B27709_1_105_c.jpeg" alt="صورة 23" class="lazy">
+  <img src="thumbnails/CB553C58-625C-4A9B-8B39-CBD7085B6035_1_105_c.jpeg" data-src="Pics/CB553C58-625C-4A9B-8B39-CBD7085B6035_1_105_c.jpeg" alt="صورة 24" class="lazy">
+  </div>
+</main>
 
-  <div class="footer">Belevision © 2025</div>
+<div id="lightbox"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/three@0.155.0/build/three.min.js"></script>
-<!-- Swiper.js -->
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@10/swiper-bundle.min.css">
-<script src="https://cdn.jsdelivr.net/npm/swiper@10/swiper-bundle.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.13.0/gsap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.13.0/ScrollTrigger.min.js"></script>
 <script>
-// --- Three.js animated background (slightly simplified) ---
-(function(){
+// small perf logger to trace delays
+const _start = performance.now();
+function perf(label){ console.debug(`[perf +${Math.round(performance.now()-_start)}ms] ${label}`); }
+// log resource timing for a URL if available
+function logResourceTiming(url){
+  try{
+    const entries = performance.getEntriesByName(url) || [];
+    if(entries.length){
+      const e = entries[0];
+      console.debug('resourceTiming', url, {startTime: Math.round(e.startTime), fetchStart: Math.round(e.fetchStart), responseStart: Math.round(e.responseStart), responseEnd: Math.round(e.responseEnd), duration: Math.round(e.duration)});
+    } else {
+      console.debug('resourceTiming: no entry for', url);
+    }
+  }catch(err){ console.debug('resourceTiming error', err); }
+}
+// simple main-thread jank monitor during animations (short duration)
+function monitorJank(durationMs=600, thresholdMs=40){
+  const t0 = performance.now(); let last = t0; let maxDelta = 0;
+  function tick(){
+    const now = performance.now(); const delta = now - last; if(delta>maxDelta) maxDelta = delta; last = now;
+    if(now - t0 < durationMs) requestAnimationFrame(tick);
+    else { if(maxDelta > thresholdMs) console.warn('main-thread jank detected, max frame delta ms:', Math.round(maxDelta)); else console.debug('jank OK, max frame delta ms:', Math.round(maxDelta)); }
+  }
+  requestAnimationFrame(tick);
+}
+// --- Three.js stars background (copied from index.html) ---
+function initStars(){
   const canvas = document.getElementById('canvas-bg');
-  if(!canvas) return;
   const scene = new THREE.Scene();
-  scene.fog = new THREE.FogExp2(0x000000, 0.00015);
+  scene.fog = new THREE.FogExp2(0x000000,0.0002);
   const camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 10000);
   camera.position.z = 0;
   const renderer = new THREE.WebGLRenderer({canvas, alpha:true, antialias:true});
   renderer.setSize(window.innerWidth, window.innerHeight);
-  renderer.setPixelRatio(window.devicePixelRatio || 1);
+  renderer.setPixelRatio(window.devicePixelRatio);
   const pointSprite = new THREE.TextureLoader().load('https://threejs.org/examples/textures/sprites/disc.png');
+
   function createStars(count, zRange){
     const geometry = new THREE.BufferGeometry();
     const positions = [];
     const sizes = [];
     const speeds = [];
     const phases = [];
+
+    // size attenuation based on zRange so distant layers use smaller points
+    const baseScale = zRange > 4000 ? 0.55 : (zRange > 2000 ? 0.8 : 1.0);
+
     for(let i=0;i<count;i++){
       positions.push((Math.random()-0.5)*4000,(Math.random()-0.5)*4000,-Math.random()*zRange);
-      sizes.push(Math.random()*2.6+1.4);
-      speeds.push(Math.random()*0.12+0.05);
+      sizes.push((Math.random()*2.6+1.4) * baseScale);
+      // slightly faster near stars
+      speeds.push((Math.random()*0.12+0.05) * (1.0 + (1.0-baseScale)*0.6));
       phases.push(Math.random()*Math.PI*2);
     }
-    geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions,3));
-    geometry.setAttribute('size', new THREE.Float32BufferAttribute(sizes,1));
-    geometry.setAttribute('speed', new THREE.Float32BufferAttribute(speeds,1));
-    geometry.setAttribute('phase', new THREE.Float32BufferAttribute(phases,1));
+
+    geometry.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));
+    geometry.setAttribute('size',new THREE.Float32BufferAttribute(sizes,1));
+    geometry.setAttribute('speed',new THREE.Float32BufferAttribute(speeds,1));
+    geometry.setAttribute('phase',new THREE.Float32BufferAttribute(phases,1));
+
     const material = new THREE.ShaderMaterial({
-      uniforms:{time:{value:0}, pointTexture:{value:pointSprite}},
-      vertexShader:`attribute float size; attribute float phase; varying float vDepth; varying float vPhase; void main(){ vec4 mvPosition=modelViewMatrix*vec4(position,1.0); vDepth=-mvPosition.z; vPhase=phase; gl_PointSize=size*(220.0/vDepth); gl_Position=projectionMatrix*mvPosition; }`,
-      fragmentShader:`uniform sampler2D pointTexture; uniform float time; varying float vDepth; varying float vPhase; void main(){ vec4 texColor=texture2D(pointTexture,gl_PointCoord); float intensity=1.06/(0.05+vDepth*0.00062); intensity *= 0.78 + 0.28*sin(time*2.0+vPhase); intensity *= smoothstep(0.0, 800.0, vDepth); gl_FragColor=vec4(vec3(intensity), texColor.a); }`,
+      uniforms:{
+        time:{value:0},
+        pointTexture:{value:pointSprite}
+      },
+      vertexShader:`attribute float size; attribute float phase; varying float vDepth; varying float vPhase; void main(){ vec4 mvPosition=modelViewMatrix*vec4(position,1.0); vDepth=-mvPosition.z; vPhase=phase; gl_PointSize=size*(300.0/vDepth); gl_Position=projectionMatrix*mvPosition;}`,
+      fragmentShader:`uniform sampler2D pointTexture; uniform float time; varying float vDepth; varying float vPhase; void main(){ vec4 texColor=texture2D(pointTexture,gl_PointCoord);
+        // subtle color variation per-star based on phase-derived hash
+        float hueSeed = fract(sin(vPhase*43758.5453));
+  vec3 cold = vec3(0.6, 0.7, 1.0);   // أزرق واضح
+  vec3 warm = vec3(1.0, 0.85, 0.7);  // أصفر ذهبي
+        vec3 starColor = mix(cold, warm, hueSeed*0.6);
+        // depth-based attenuation and twinkle
+        float intensity = 1.12/(0.05+vDepth*0.00055);
+        intensity *= (0.85 + 0.45 * sin(time*2.0 + vPhase));
+        intensity *= smoothstep(0.0, 900.0, vDepth);
+        gl_FragColor = vec4(starColor * intensity, texColor.a);
+      }`,
       transparent:true, blending:THREE.AdditiveBlending, depthTest:false
     });
-    const stars = new THREE.Points(geometry, material);
-    scene.add(stars);
-    return stars;
+
+    const points = new THREE.Points(geometry, material);
+    scene.add(points);
+    return points;
   }
-  const nearStars = createStars(1200, 1000);
-  const midStars = createStars(900, 3000);
-  const farStars = createStars(600, 5000);
-  const nebulaGeometry = new THREE.PlaneGeometry(7000,7000,32,32);
+
+  // increased counts for a richer field
+  const nearStars = createStars(2200, 1000);
+  const midStars  = createStars(1600, 4000);
+  const farStars  = createStars(1000, 8000);
+
+  const nebulaGeometry = new THREE.PlaneGeometry(9000,9000,32,32);
   const nebulaMaterial = new THREE.ShaderMaterial({
-    uniforms:{time:{value:0}},
+    uniforms:{time:{value:0}, intensity:{value:1.0}},
     vertexShader:`varying vec2 vUv; void main(){ vUv=uv; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0); }`,
-    fragmentShader:`varying vec2 vUv; uniform float time; void main(){ float n=sin(vUv.x*6.0 + time*0.04)*cos(vUv.y*6.0 + time*0.06); vec3 color=vec3(0.01,0.01,0.02)+vec3(n*0.04,n*0.02,n*0.04); gl_FragColor=vec4(color,0.45); }`,
+    fragmentShader:`varying vec2 vUv; uniform float time; uniform float intensity; void main(){ float n=sin(vUv.x*4.0 + time*0.025)*cos(vUv.y*5.0 + time*0.04); vec3 base = vec3(0.05,0.02,0.07); vec3 color = base + vec3(n*0.15, n*0.1, n*0.25) * intensity; gl_FragColor = vec4(color, 0.75 * intensity); }`,
     transparent:true, blending:THREE.AdditiveBlending, depthTest:false
   });
-  const nebula = new THREE.Mesh(nebulaGeometry, nebulaMaterial); nebula.position.z = -1800; scene.add(nebula);
+  const nebula = new THREE.Mesh(nebulaGeometry, nebulaMaterial);
+  nebula.position.z = -1800;
+  scene.add(nebula);
+
+  // soft atmospheric fog plane (subtle, lower default intensity)
+  const fogGeometry = new THREE.PlaneGeometry(12000, 6000, 1, 1);
+  const fogMaterial = new THREE.ShaderMaterial({
+    uniforms: { time: { value: 0 }, fogIntensity: { value: 0.35 } },
+    vertexShader: `varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
+    fragmentShader: `varying vec2 vUv; uniform float time; uniform float fogIntensity; void main(){ float stripe = sin((vUv.x + time*0.02)*6.0) * 0.5 + 0.5; float gradient = smoothstep(0.0, 1.0, vUv.y); vec3 fogColor = vec3(0.02, 0.04, 0.08); float alpha = fogIntensity * (0.35 + 0.25*stripe) * gradient; gl_FragColor = vec4(fogColor, alpha); }`,
+    transparent: true, depthTest: false, blending: THREE.NormalBlending
+  });
+  const fogPlane = new THREE.Mesh(fogGeometry, fogMaterial);
+  fogPlane.position.z = -1600;
+  fogPlane.rotation.x = 0.05;
+  scene.add(fogPlane);
+
+  // subtle mouse parallax: target rotation set on mousemove and lerped in animate
+  let targetRotX = 0, targetRotY = 0;
+  document.addEventListener('mousemove', (e)=>{
+    const x = (e.clientX / window.innerWidth - 0.5) * 0.06; // small angle
+    const y = (e.clientY / window.innerHeight - 0.5) * 0.04;
+    targetRotX = y;
+    targetRotY = x;
+  });
+
+  // expose a small bgControl so UI can pause/resume rendering
+  window.bgControl = (function(){ let running = true; return { pause(){ running = false; }, resume(){ running = true; }, isRunning(){ return running; } }; })();
+
   let lastTime = 0;
   function animate(time){
-    const delta = time - lastTime; lastTime = time;
     requestAnimationFrame(animate);
-    nebulaMaterial.uniforms.time.value = time*0.001;
-    [nearStars, midStars, farStars].forEach(layer=>{
+    if(window.bgControl && !window.bgControl.isRunning()){
+      // update minimal uniforms for visual continuity and skip heavy position updates
+      nebulaMaterial.uniforms.time.value = time*0.001;
+      fogMaterial.uniforms.time.value = time*0.001;
+      return;
+    }
+    const delta = time - lastTime;
+    lastTime = time;
+  nebulaMaterial.uniforms.time.value = time*0.001;
+  fogMaterial.uniforms.time.value = time*0.001;
+
+    [nearStars,midStars,farStars].forEach(layer=>{
       const positions = layer.geometry.attributes.position.array;
       const speeds = layer.geometry.attributes.speed.array;
       const count = positions.length/3;
       for(let i=0;i<count;i++){
-        let idx = i*3; positions[idx+2] += speeds[i]*1.2; if(positions[idx+2] > 50){ positions[idx] = (Math.random()-0.5)*4000; positions[idx+1] = (Math.random()-0.5)*4000; positions[idx+2] = -5000; }
+        let idx = i*3;
+        positions[idx+2] += speeds[i]*1.2;
+        if(positions[idx+2] > 50){
+          positions[idx] = (Math.random()-0.5)*4000;
+          positions[idx+1] = (Math.random()-0.5)*4000;
+          positions[idx+2] = -5000;
+        }
       }
-      layer.geometry.attributes.position.needsUpdate = true; layer.material.uniforms.time.value = time*0.001;
+      layer.geometry.attributes.position.needsUpdate = true;
+      layer.material.uniforms.time.value = time*0.001;
     });
+
+    // lerp camera rotation towards target for parallax
+    camera.rotation.x += (targetRotX - camera.rotation.x) * 0.06;
+    camera.rotation.y += (targetRotY - camera.rotation.y) * 0.06;
+
+    // gentle fog pulsing
+    fogMaterial.uniforms.fogIntensity.value = 0.22 + 0.08 * Math.sin(time*0.0009);
+
     renderer.render(scene, camera);
   }
   animate();
+
   window.addEventListener('resize', ()=>{ camera.aspect = window.innerWidth/window.innerHeight; camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth, window.innerHeight); });
-})();
+}
 
-// --- Gallery interactions ---
-document.addEventListener('DOMContentLoaded', ()=>{
-  // Use Swiper for slides + thumbs
-  let thumbsSwiper = new Swiper('.thumbs-swiper', {
-    slidesPerView: 4,
-    freeMode: true,
-    watchSlidesProgress: true,
-    spaceBetween: 12,
-    breakpoints: { 900: { slidesPerView: 4 }, 600: { slidesPerView: 3 }, 320: { slidesPerView: 2 } }
-  });
+// Delay heavy init until after load to reduce contention during first paint
+window.addEventListener('load', ()=>{
+  try{ initStars(); }catch(err){ console.warn('initStars failed', err); }
+});
 
-  let mainSwiper = new Swiper('.main-swiper', {
-    slidesPerView: 1,
-    spaceBetween: 20,
-    navigation: { nextEl: '.swiper-button-next', prevEl: '.swiper-button-prev' },
-    thumbs: { swiper: thumbsSwiper },
-    on: {
-      slideChange: function(){
-        // add in-view like behavior for animation hooks
-        document.querySelectorAll('.main-swiper .swiper-slide').forEach((el, idx)=>{
-          if(idx === this.activeIndex) el.classList.add('in-view'); else el.classList.remove('in-view');
-        });
+// --- GSAP ScrollTrigger & lazy/floating init ---
+gsap.registerPlugin(ScrollTrigger);
+// Floating animation helper - create a looping tween and store marker on element
+// Floating effect removed — no-op placeholder kept for compatibility
+function applyFloatingIfEligible(img){
+  // intentionally disabled
+  return;
+}
+
+// Layout is now handled via CSS Masonry (columns). The previous JS reflowStages() has been removed.
+
+// Reflow again on resize (debounced)
+let __reflowTimer = null;
+window.addEventListener('resize', ()=>{
+  clearTimeout(__reflowTimer);
+  __reflowTimer = setTimeout(()=>{ try{ ScrollTrigger.refresh(); }catch(e){} }, 220);
+});
+
+// IntersectionObserver to lazy-load large images from data-src and trigger reveal + floating
+const lazyImages = document.querySelectorAll('img.lazy');
+const lazyObserver = new IntersectionObserver((entries, obs) => {
+  entries.forEach(entry => {
+    const img = entry.target;
+    if(entry.isIntersecting){
+      // swap in large image src from data-src (but keep thumbnail as immediate src until large loads)
+      const large = img.dataset && img.dataset.src;
+      if(large){
+        const big = new Image();
+        big.src = large;
+        big.onload = () => {
+          img.src = large;
+          // ensure orientation class reflects the actual large image dimensions
+          try{
+            const w = big.naturalWidth || img.naturalWidth || 1;
+            const h = big.naturalHeight || img.naturalHeight || 1;
+            if(w >= h){ img.classList.add('landscape'); img.classList.remove('portrait'); }
+            else { img.classList.add('portrait'); img.classList.remove('landscape'); }
+          }catch(e){ /* ignore */ }
+          img.classList.remove('lazy');
+          obs.unobserve(img);
+          // reveal animation using GSAP
+          gsap.fromTo(img, {opacity:0, y:18}, {opacity:1, y:0, duration:0.7, ease:'power3.out'});
+          // mark loaded so CSS fade-in applies
+          img.classList.add('loaded');
+          applyFloatingIfEligible(img);
+        };
+        big.onerror = () => {
+          // if load fails, still remove lazy to avoid retry loops
+          img.classList.remove('lazy');
+          obs.unobserve(img);
+        };
+      } else {
+        // no data-src, still reveal and apply floating
+        gsap.fromTo(img, {opacity:0, y:18}, {opacity:1, y:0, duration:0.7, ease:'power3.out'});
+        applyFloatingIfEligible(img);
+        obs.unobserve(img);
       }
     }
   });
+}, {rootMargin: '300px 0px 300px 0px', threshold: 0.01});
 
-  // Kick initial in-view state
-  document.querySelectorAll('.main-swiper .swiper-slide').forEach((el, idx)=>{ if(idx===0) el.classList.add('in-view'); });
+lazyImages.forEach(img => lazyObserver.observe(img));
 
-  // lightbox wiring (preserve existing behavior)
-  const bigPreview = document.getElementById('bigPreview');
-  const bigInner = bigPreview.querySelector('.big-preview__inner');
-  const bigClose = bigPreview.querySelector('.big-preview__close');
-  function openBig(img){ if(!img) return; bigInner.innerHTML=''; const b = document.createElement('img'); b.src = img.src; b.alt = img.alt || ''; bigInner.appendChild(b); const caption = img.dataset && img.dataset.caption ? img.dataset.caption : (img.alt || ''); if(caption){ const c = document.createElement('div'); c.className='big-preview__caption'; c.textContent = caption; bigInner.appendChild(c); } bigPreview.classList.add('is-open'); bigPreview.setAttribute('aria-hidden','false'); bigPreview._lastCloseAt = 0; if(bigClose && typeof bigClose.focus === 'function'){ try{ bigClose.focus({preventScroll:true}); }catch(e){ try{ bigClose.focus(); }catch(_){} } } }
-  function closeBig(){ bigPreview.classList.remove('is-open'); bigPreview.setAttribute('aria-hidden','true'); bigInner.innerHTML=''; bigPreview._lastCloseAt = Date.now(); setTimeout(()=>{ bigPreview._lastCloseAt = 0; }, 600); }
-  if(bigClose) bigClose.addEventListener('click', (e)=>{ e.stopPropagation(); closeBig(); });
-  bigPreview.addEventListener('pointerdown', (e)=>{ if(!bigInner.contains(e.target)){ bigPreview._lastCloseAt = Date.now(); closeBig(); } });
-  document.addEventListener('keydown', (e)=>{ if(e.key === 'Escape') closeBig(); });
-
-  document.querySelectorAll('.gallery .images img').forEach(img=>{
-    img.style.cursor = 'pointer';
-    img.addEventListener('click', (e)=>{ e.stopPropagation(); const last = bigPreview._lastCloseAt || 0; if(last && (Date.now()-last) < 450) return; openBig(img); });
-    img.addEventListener('keydown', (e)=>{ if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); openBig(img); } });
-  });
-
-  // Convert images into a free-form collage inside each slide
-  function makeCollage(container){
-    const imgs = Array.from(container.querySelectorAll('img'));
-    const collage = document.createElement('div'); collage.className = 'collage';
-    container.innerHTML = ''; container.appendChild(collage);
-    const boundsW = container.clientWidth || 1000;
-    const boundsH = container.clientHeight || 600;
-    imgs.forEach((img, i)=>{
-      const tile = document.createElement('div');
-      tile.className = 'tile';
-      // size random pick
-      const sizes = ['small','medium','large','xlarge'];
-      tile.classList.add(sizes[Math.floor(Math.random()*sizes.length)]);
-      // random pos within bounds
-      const pad = 20;
-      const left = Math.floor(Math.random()*(boundsW - pad*2)) + pad;
-      const top = Math.floor(Math.random()*(boundsH - pad*2)) + pad;
-      tile.style.left = left + 'px';
-      tile.style.top = top + 'px';
-      // slight rotation
-      const rot = (Math.random()*20 - 10).toFixed(2);
-      tile.style.transform = `translateY(24px) rotate(${rot}deg) scale(0.98)`;
-      tile.style.opacity = '0.0';
-      // inner image
-      const newImg = document.createElement('img'); newImg.src = img.src; newImg.alt = img.alt || '';
-      tile.appendChild(newImg);
-      collage.appendChild(tile);
-
-      // open big on click
-      tile.addEventListener('click', (e)=>{ e.stopPropagation(); const last = bigPreview._lastCloseAt || 0; if(last && (Date.now()-last) < 450) return; openBig(newImg); });
-      tile.addEventListener('keydown', (e)=>{ if(e.key==='Enter' || e.key===' '){ e.preventDefault(); openBig(newImg); } });
-    });
-
-    // pointer parallax
-    collage.addEventListener('pointermove', (e)=>{
-      const rect = collage.getBoundingClientRect();
-      const cx = rect.left + rect.width/2; const cy = rect.top + rect.height/2;
-      const dx = (e.clientX - cx)/rect.width; const dy = (e.clientY - cy)/rect.height;
-      Array.from(collage.children).forEach((tile, idx)=>{
-        const depth = (idx % 5) * 6; // pseudo-depth
-        const tx = dx * depth; const ty = dy * depth;
-        tile.style.transform = tile.style.transform.replace(/translateY\([^)]*\)/, `translateY(${8 - depth/4}px)`);
-        tile.style.transform += ` translate3d(${tx}px, ${ty}px, 0)`;
-      });
-    });
-
-    // reveal tiles when parent slide is in-view
-    const parentSlide = container.closest('.swiper-slide');
-    if(parentSlide && parentSlide.classList.contains('in-view')){
-      Array.from(collage.children).forEach((t, idx)=>{ setTimeout(()=>{ t.style.opacity='1'; t.style.transform = t.style.transform.replace(/translateY\([^)]*\)/, 'translateY(0)') }, idx*80); });
-    }
-  }
-
-  // Initialize collages for each slide images container
-  document.querySelectorAll('.main-swiper .images').forEach(imgsContainer=>{
-    // try to size container to allow positioning
-    imgsContainer.style.minHeight = '420px';
-    makeCollage(imgsContainer);
-  });
+// ensure images that are already cached/loaded get the 'loaded' class
+document.querySelectorAll('.stage img').forEach(img => {
+  if(img.complete && img.naturalWidth !== 0){ img.classList.add('loaded'); }
+  img.addEventListener('load', () => img.classList.add('loaded'));
 });
+
+// Refresh ScrollTrigger after a small delay to account for swapped image sizes
+window.addEventListener('load', ()=>{ setTimeout(()=>ScrollTrigger.refresh(), 600); });
+
+// --- Simple Lightbox Overlay (loads large image on demand) ---
+const lightbox = document.getElementById('lightbox');
+let activeImgEl = null;
+
+// Ensure images are keyboard-focusable
+document.querySelectorAll('.stage img').forEach(img => {
+  img.setAttribute('tabindex', '0');
+  img.style.cursor = 'pointer';
+});
+
+function showLightboxFromThumb(thumbImg) {
+  // Remove any previous image
+  lightbox.innerHTML = '';
+  const largeSrc = thumbImg.dataset && thumbImg.dataset.src ? thumbImg.dataset.src : thumbImg.src;
+  const img = document.createElement('img');
+  img.className = 'lightbox-img';
+  img.src = ''; // start blank so we can fade in when loaded
+  img.alt = thumbImg.alt || '';
+  img.style.opacity = '0';
+  activeImgEl = img;
+  lightbox.appendChild(img);
+  // Show overlay first (dims background)
+  lightbox.classList.add('show');
+  // pause bg rendering during the reveal
+  if(window.bgControl && window.bgControl.isRunning && window.bgControl.pause) window.bgControl.pause();
+  // Load large image now
+  const big = new Image();
+  big.src = largeSrc;
+  big.onload = () => {
+    img.src = largeSrc;
+    // fade in the actual image
+    gsap.to(img, { opacity: 1, duration: 0.32, ease: 'power2.out', onComplete: () => {
+      if(window.bgControl && window.bgControl.resume) window.bgControl.resume();
+    }});
+  };
+  big.onerror = () => {
+    // fallback: show thumbnail immediately
+    img.src = thumbImg.src;
+    img.style.opacity = '1';
+    if(window.bgControl && window.bgControl.resume) window.bgControl.resume();
+  };
+}
+
+function hideLightbox() {
+  if (!lightbox.classList.contains('show')) return;
+  // Fade out overlay and cleanup
+  if (activeImgEl) {
+    gsap.to(activeImgEl, {
+      opacity: 0,
+      duration: 0.23,
+      ease: 'power2.in',
+      onComplete: () => {
+        lightbox.classList.remove('show');
+        lightbox.innerHTML = '';
+        activeImgEl = null;
+      }
+    });
+  } else {
+    lightbox.classList.remove('show');
+    lightbox.innerHTML = '';
+    activeImgEl = null;
+  }
+}
+
+// Click to open (loads data-src if present)
+document.getElementById('gallery').addEventListener('click', (e) => {
+  const img = e.target.closest('.stage img');
+  if (!img) return;
+  showLightboxFromThumb(img);
+});
+// Keyboard open via Enter/Space
+document.getElementById('gallery').addEventListener('keydown', (e) => {
+  if (e.key !== 'Enter' && e.key !== ' ') return;
+  const img = e.target.closest && e.target.closest('.stage img') ? e.target : null;
+  if (img) {
+    e.preventDefault();
+    showLightboxFromThumb(img);
+  }
+});
+// Click outside image closes overlay
+lightbox.addEventListener('click', (e) => {
+  if (e.target === lightbox) hideLightbox();
+});
+// Pressing Escape closes overlay
+window.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') hideLightbox();
+});
+
 </script>
 </body>
 </html>
+
+<script>
+// Increase header word size by 4px (applies when .site-word exists)
+(function(){
+  try{
+    const el = document.querySelector('body > header > div > a > .site-word');
+    if(!el) return;
+    const cs = window.getComputedStyle(el);
+    const fs = cs.fontSize ? parseFloat(cs.fontSize) : null;
+    if(fs){ el.style.fontSize = (fs + 4) + 'px'; }
+  }catch(e){ console.error('increase site-word size failed', e); }
+})();
+</script>
