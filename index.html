@@ -1,12 +1,219 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ar">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Belevision</title>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Belevision — Landing 3D</title>
+<style>
+:root{
+  --bg-dark:#000000;
+  --text:#ffffff;
+  --accent:#FFD36F;
+}
+*{box-sizing:border-box; margin:0; padding:0;}
+html, body {height:100%; width:100%; font-family: 'IBM Plex Sans', sans-serif; overflow:hidden; background:var(--bg-dark); color:var(--text);}
+#canvas-bg {position:fixed; top:0; left:0; width:100%; height:100%; z-index:0;}
+.wrap{position:relative; z-index:2; height:100vh; display:flex; align-items:center; justify-content:center; flex-direction:column; text-align:center; padding:28px;}
+.logo{ position:absolute; left:20px; top:18px; z-index:3; font-weight:600; color:rgba(255,255,255,0.9);}
+.headline{
+  font-family:'Bradley Hand', cursive; 
+  font-size:clamp(64px, 10vw, 128px); 
+  font-weight:700; 
+  margin-bottom:12px; 
+  text-shadow: 0 0 10px #FFD36F, 0 0 20px rgba(255, 211, 111, 0.7);
+}
+.sub{
+  font-size:clamp(14px,2vw,20px);
+  opacity:0.85; 
+  margin-bottom:36px; 
+  text-shadow: 0 0 8px rgba(255,255,255,0.4);
+}
+footer{position:absolute; bottom:12px; width:100%; display:flex; justify-content:center; gap:24px; font-size:12px; opacity:0.7; color:var(--text); z-index:3;}
+footer a {color:var(--text); text-decoration:none; transition:color 0.3s;}
+footer a:hover{color:var(--accent);}
+#portal-container {position:relative; z-index:3; display:flex; gap:48px; align-items:center; justify-content:center; flex-wrap:wrap;}
+.portal-item{
+  cursor:pointer; 
+  font-size:24px;
+  transition: all 0.3s ease; 
+  color:var(--text); 
+  text-shadow:0 0 15px var(--accent);
+}
+.portal-item:hover{ 
+  text-shadow: 0 0 30px #FFD36F, 0 0 15px rgba(255, 211, 111, 0.6);
+}
+#zoom-overlay{
+  position:fixed;
+  top:0; left:0; width:100%; height:100%;
+  background:#000;
+  z-index:999;
+  opacity:0;
+  pointer-events:none;
+  transition:opacity 0.6s ease;
+}
+</style>
 </head>
 <body>
-  <h1>Hello World! This is Belevision 🌍</h1>
-  <p>My first step to build my digital identity as an artist.</p>
+<canvas id="canvas-bg"></canvas>
+<div id="zoom-overlay"></div>
+<div class="wrap">
+  <div class="headline" id="headline">Belevision</div>
+  <div class="sub">خير الكلام ما قل ودل — بوابات إلى عوالم بيلي</div>
+  <div id="portal-container">
+    <div class="portal-item" data-target="texts.html" tabindex="0">قراءات</div>
+    <div class="portal-item" data-target="shadows.html" tabindex="0">ظلال</div>
+    <div class="portal-item" data-target="characters.html" tabindex="0">شخصيات</div>
+  </div>
+</div>
+<footer>
+  <a href="#">تواصل</a>
+  <a href="#">سياسة الخصوصية</a>
+  <a href="#">بيان النشر</a>
+  <span>© 2025 Belevision</span>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.155.0/build/three.min.js"></script>
+<script>
+const canvas = document.getElementById('canvas-bg');
+const overlay = document.getElementById('zoom-overlay');
+const scene = new THREE.Scene();
+scene.fog = new THREE.FogExp2(0x000000,0.00015);
+
+const camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight,0.1,10000);
+camera.position.z = 0;
+const renderer = new THREE.WebGLRenderer({canvas, alpha:true, antialias:true});
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setPixelRatio(window.devicePixelRatio);
+
+const pointSprite = new THREE.TextureLoader().load('https://threejs.org/examples/textures/sprites/disc.png');
+
+function createStars(count, zRange){
+  const geometry = new THREE.BufferGeometry();
+  const positions = [];
+  const sizes = [];
+  const speeds = [];
+  const phases = [];
+
+    for(let i=0;i<count;i++){
+    positions.push((Math.random()-0.5)*4000,(Math.random()-0.5)*4000,-Math.random()*zRange);
+      sizes.push(Math.random()*2.6+1.4);
+    speeds.push(Math.random()*0.12+0.05); 
+    phases.push(Math.random()*Math.PI*2);
+  }
+
+  geometry.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));
+  geometry.setAttribute('size',new THREE.Float32BufferAttribute(sizes,1));
+  geometry.setAttribute('speed',new THREE.Float32BufferAttribute(speeds,1));
+  geometry.setAttribute('phase',new THREE.Float32BufferAttribute(phases,1));
+
+  const material = new THREE.ShaderMaterial({
+    uniforms:{
+      time:{value:0},
+      pointTexture:{value:pointSprite}
+    },
+    vertexShader:`attribute float size; attribute float phase; varying float vDepth; varying float vPhase; void main(){ vec4 mvPosition=modelViewMatrix*vec4(position,1.0); vDepth=-mvPosition.z; vPhase=phase; gl_PointSize=size*(220.0/vDepth); gl_Position=projectionMatrix*mvPosition;}`,
+  fragmentShader:`uniform sampler2D pointTexture; uniform float time; varying float vDepth; varying float vPhase; void main(){ vec4 texColor=texture2D(pointTexture,gl_PointCoord); float intensity=1.06/(0.05+vDepth*0.00062); intensity *= 0.78 + 0.28*sin(time*2.0+vPhase); intensity *= smoothstep(0.0, 800.0, vDepth); gl_FragColor=vec4(vec3(intensity), texColor.a);}`,
+    transparent:true, blending:THREE.AdditiveBlending, depthTest:false
+  });
+
+  const stars = new THREE.Points(geometry,material);
+  scene.add(stars);
+  return stars;
+}
+
+const nearStars=createStars(1700,1000);
+const midStars=createStars(1100,3000);
+const farStars=createStars(800,5000);
+
+// ===== Nebula =====
+const nebulaGeometry=new THREE.PlaneGeometry(7000,7000,32,32);
+const nebulaMaterial=new THREE.ShaderMaterial({
+  uniforms:{time:{value:0}},
+  vertexShader:`varying vec2 vUv; void main(){ vUv=uv; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0); }`,
+  fragmentShader:`varying vec2 vUv; uniform float time; void main(){ float n=sin(vUv.x*6.0 + time*0.04)*cos(vUv.y*6.0 + time*0.06); vec3 color=vec3(0.01,0.01,0.02)+vec3(n*0.04,n*0.02,n*0.04); gl_FragColor=vec4(color,0.45);}`,
+  transparent:true, blending:THREE.AdditiveBlending, depthTest:false
+});
+const nebula=new THREE.Mesh(nebulaGeometry,nebulaMaterial);
+nebula.position.z=-1800;
+scene.add(nebula);
+
+// ===== Animate =====
+let lastTime=0;
+function animate(time){
+  const delta=time-lastTime;
+  lastTime=time;
+  requestAnimationFrame(animate);
+  nebulaMaterial.uniforms.time.value=time*0.001;
+
+  [nearStars,midStars,farStars].forEach(layer=>{
+    const positions=layer.geometry.attributes.position.array;
+    const speeds=layer.geometry.attributes.speed.array;
+    const count=positions.length/3;
+    for(let i=0;i<count;i++){
+      let idx=i*3;
+      positions[idx+2]+=speeds[i]*1.2; 
+      if(positions[idx+2]>50){
+        positions[idx]=(Math.random()-0.5)*4000;
+        positions[idx+1]=(Math.random()-0.5)*4000;
+        positions[idx+2]=-5000;
+      }
+    }
+    layer.geometry.attributes.position.needsUpdate=true;
+    layer.material.uniforms.time.value=time*0.001;
+  });
+
+  renderer.render(scene,camera);
+}
+animate();
+
+// ===== Resize =====
+window.addEventListener('resize',()=>{
+  camera.aspect=window.innerWidth/window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth,window.innerHeight);
+});
+
+// ===== Zoom effect محسّن =====
+document.querySelectorAll('.portal-item').forEach(item=>{
+  item.addEventListener('click',()=>{
+    const rect = item.getBoundingClientRect();
+    const targetX = rect.left + rect.width/2 - window.innerWidth/2;
+    const targetY = -(rect.top + rect.height/2 - window.innerHeight/2);
+
+    const duration = 600;
+    const start = performance.now();
+    const startZ = camera.position.z;
+    const zoomDistance = 800; // المسافة التي تتحرك فيها الكاميرا
+
+    function zoomAnimate(now){
+      const t = Math.min((now - start)/duration,1);
+      camera.position.z = startZ + zoomDistance * t;
+      camera.position.x = targetX * 0.1 * t; // انزلاق خفيف على محور X
+      camera.position.y = targetY * 0.1 * t; // انزلاق خفيف على محور Y
+      if(t < 1){
+        requestAnimationFrame(zoomAnimate);
+      } else {
+        overlay.style.opacity = 1;
+        overlay.style.pointerEvents = 'auto';
+        setTimeout(()=>{ window.location.href = item.dataset.target; },200);
+      }
+    }
+    requestAnimationFrame(zoomAnimate);
+  });
+});
+
+// Restore clean state when page is shown (handles back/forward cache and back navigation)
+window.addEventListener('pageshow', (event) => {
+  try{
+    // If page was restored from bfcache or loaded via back/forward, ensure overlay is hidden
+    overlay.style.opacity = 0;
+    overlay.style.pointerEvents = 'none';
+    // reset camera transform to initial
+    if(camera){ camera.position.set(0,0,0); camera.lookAt(0,0,0); camera.updateProjectionMatrix && camera.updateProjectionMatrix(); }
+    // force a single render so the canvas updates
+    if(typeof renderer !== 'undefined' && renderer && scene && camera) renderer.render(scene, camera);
+  }catch(err){ console.warn('pageshow restore failed', err); }
+});
+</script>
 </body>
 </html>

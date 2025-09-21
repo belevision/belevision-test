@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Belevision — معرض الصور GSAP</title>
+<style>
+:root{
+  --bg-dark:#000;
+  --text:#fff;
+  --accent:#FFD36F;
+  --header-height:80px;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+html,body{height:100%;font-family:'IBM Plex Sans',sans-serif;background:#000;color:#fff;overflow-x:hidden;}
+body{padding-top:var(--header-height);overscroll-behavior-y:contain;scroll-behavior:smooth}
+
+/* Header */
+.site-header{
+  position:fixed;top:0;left:0;width:100%;height:var(--header-height);
+  display:flex;align-items:center;justify-content:center;
+  background:#000;z-index:1000;
+}
+/* Headline-inspired wordmark for header (uses homepage headline styling but scaled down) */
+.site-logo{
+  color:var(--text);
+  font-family:'Bradley Hand', cursive, 'IBM Plex Sans', sans-serif;
+  font-weight:700;
+  font-size:clamp(18px, 2.6vw, 28px);
+  text-decoration:none;
+  text-shadow: 0 0 6px #FFD36F, 0 0 12px rgba(255,211,111,0.7);
+  display:inline-flex;align-items:center;gap:10px;padding:6px 8px;border-radius:6px;
+}
+.site-logo .site-mark{width:28px;height:28px;background:linear-gradient(90deg,#FFD36F,#FFB66B);border-radius:50%;display:inline-block}
+.site-word{font-family:'Bradley Hand', cursive, 'IBM Plex Sans', sans-serif; font-weight:700; font-size:1.05em; color:var(--text)}
+
+/* Canvas background */
+#canvas-bg{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;pointer-events:none;}
+
+/* Main gallery: use page scrolling (body) so ScrollTrigger works with window */
+body{padding-top:var(--header-height);overscroll-behavior-y:contain;scroll-behavior:smooth;scroll-snap-type:y mandatory;scroll-padding-top:var(--header-height)}
+main{position:relative;z-index:2}
+
+/* nicer scrollbar for WebKit (apply to document) */
+::-webkit-scrollbar{width:10px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.08);border-radius:8px}
+
+/* Stage: responsive grid, images auto-fill and auto-size, no fixed height, use aspect-ratio for consistency */
+/* Each stage fills the viewport, scroll-snap, grid fills entire area */
+/* 
+  Responsive stage grid: 
+    - Always fills viewport (100vh)
+    - Images are proportionally sized to fit within the grid, never overflowing viewport
+    - Uses grid-template-rows: repeat(auto-fill, 1fr) for dynamic row count
+    - Padding is included in sizing
+*/
+/* Stage: responsive grid, fills viewport, images scale to fit, no overflow */
+.stage {
+  min-height: 100vh;
+  height: 100vh;
+  width: 100vw;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
+  /* Use auto-rows to distribute images proportionally */
+  grid-auto-rows: 1fr;
+  gap: 14px;
+  align-content: stretch;
+  align-items: stretch;
+  scroll-snap-align: start;
+  padding: 18px 40px 60px;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+/* Images: responsive, fill cell, aspect-ratio for consistent sizing, floating animation works with dynamic sizing */
+/* Responsive images: fill grid cell, never overflow, scale with grid */
+.stage img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 12px;
+  cursor: pointer;
+  /* Remove any fixed transform/scale that could interfere with sizing */
+  /* transform: scale(0.98); */
+  opacity: 1;
+  will-change: transform, opacity;
+  transition: box-shadow 0.18s;
+  display: block;
+  max-width: 100%;
+  max-height: 100%;
+  aspect-ratio: 1 / 1;
+}
+.stage .large {
+  grid-column: span 2;
+  grid-row: span 2;
+}
+.stage .wide {
+  grid-column: span 2;
+}
+
+/* Simple Lightbox Overlay: smooth fade-in/out, overlay fades in, image fades in via JS */
+#lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+  background: linear-gradient(180deg, rgba(0,0,0,0.92), rgba(0,0,0,0.96));
+  transition: opacity 0.32s cubic-bezier(.4,0,.2,1);
+}
+#lightbox.show {
+  opacity: 1;
+  pointer-events: auto;
+  transition: opacity 0.32s cubic-bezier(.4,0,.2,1);
+}
+#lightbox .lightbox-img {
+  max-width: 92vw;
+  max-height: 92vh;
+  object-fit: contain;
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.20);
+  background: #222;
+  display: block;
+}
+</style>
+</head>
+<body>
+<!-- Unified site header -->
+<header class="site-header" role="banner">
+  <div class="site-header__inner">
+    <a class="site-logo" href="index.html" aria-label="العودة إلى الصفحة الرئيسية">
+      <span class="site-word">Belevision</span>
+    </a>
+  </div>
+</header>
+<canvas id="canvas-bg"></canvas>
+
+<main id="gallery">
+  <!-- Stage 1 -->
+  <div class="stage">
+  <img src="Pics/00567245-ABE5-4CE2-B856-B841E4AD9075_1_105_c.jpeg" alt="صورة 1" loading="lazy">
+  <img src="Pics/0237B5F8-1DE2-4B73-A5D2-E73B2AC3501C_1_105_c.jpeg" alt="صورة 2" loading="lazy">
+  <img src="Pics/0AA9466A-3E00-4F98-BDB8-6504C14D9535_1_105_c.jpeg" alt="صورة 3" loading="lazy">
+  <img src="Pics/0E04ABB4-11A6-466D-BDDF-8FCC745461FD_1_105_c.jpeg" alt="صورة 4" loading="lazy">
+  <img src="Pics/21C53E3E-31D5-4633-99A7-8C02261D2F70_1_105_c.jpeg" alt="صورة 5" loading="lazy" class="large">
+  <img src="Pics/34F160DC-9A01-4543-914B-690F6F34E9CD_1_105_c.jpeg" alt="صورة 6" loading="lazy">
+  <img src="Pics/3684802D-B09A-40A2-B688-7E6193D2AFC8_1_105_c.jpeg" alt="صورة 7" loading="lazy" class="wide">
+  <img src="Pics/57E1447E-6DDA-4BDA-B377-9FC2F6B61BE6_1_105_c.jpeg" alt="صورة 8" loading="lazy">
+  <img src="Pics/5A27E161-B010-438B-ABE3-BC63092A7200_1_105_c.jpeg" alt="صورة 9" loading="lazy">
+  <img src="Pics/5DF57B2A-CA2A-481D-8363-3C493FEDE46A_1_105_c.jpeg" alt="صورة 10" loading="lazy">
+  <img src="Pics/637854B8-0C52-4385-B1F9-78380885600F_4_5005_c.jpeg" alt="صورة 11" loading="lazy">
+  <img src="Pics/68E83A3E-B848-42D2-BBEA-F89C1F2BD18B_1_105_c.jpeg" alt="صورة 12" loading="lazy">
+  </div>
+  <!-- Stage 3: additional local images from Pics/ -->
+  <div class="stage">
+  <img src="Pics/D64A8309-BE55-45EA-9FF5-7EC3669A10C1_1_105_c.jpeg" alt="صورة 25" loading="lazy">
+  <img src="Pics/EAD63F0F-0A08-4CF9-8034-A44449415513_1_105_c.jpeg" alt="صورة 26" loading="lazy">
+  <img src="Pics/EE61001F-5BA5-4E5F-8CC5-69C548C993BB_1_105_c.jpeg" alt="صورة 27" loading="lazy">
+  <img src="Pics/F0E24295-617E-4817-A316-EEB435BB210A_1_105_c.jpeg" alt="صورة 28" loading="lazy">
+  <img src="Pics/F7E37445-17F7-4BA3-B589-C76D4ACBF2E0_1_105_c.jpeg" alt="صورة 29" loading="lazy">
+  <img src="Pics/F8317FBF-DFE4-43D2-8521-DA4368F9800E_1_105_c.jpeg" alt="صورة 30" loading="lazy">
+  <img src="Pics/FD417B31-D5E3-4653-9CE4-EB518448418C_1_105_c.jpeg" alt="صورة 31" loading="lazy">
+  <img src="Pics/637854B8-0C52-4385-B1F9-78380885600F_4_5005_c.jpeg" alt="صورة 32" loading="lazy">
+  </div>
+  <!-- Stage 2 -->
+  <div class="stage">
+  <img src="Pics/7275D664-4EF1-45E8-BB7F-5D05A5770683_1_105_c.jpeg" alt="صورة 13" loading="lazy">
+  <img src="Pics/834EAD3A-4621-40E7-8364-59763F00AD01_1_105_c.jpeg" alt="صورة 14" loading="lazy">
+  <img src="Pics/83682745-9F21-4EC1-BBFC-B4419B8249F8_1_105_c.jpeg" alt="صورة 15" loading="lazy">
+  <img src="Pics/876D0489-365A-4CB2-9497-688440CBED15_1_105_c.jpeg" alt="صورة 16" loading="lazy">
+  <img src="Pics/90FF6F0F-2D5E-4DF3-B561-0E8281D73178_1_105_c.jpeg" alt="صورة 17" loading="lazy" class="large">
+  <img src="Pics/91BFCFB6-625A-40AB-B45C-010405D3050D_1_105_c.jpeg" alt="صورة 18" loading="lazy">
+  <img src="Pics/949A9DAD-A8E1-468D-A23E-8B313332FE24_1_105_c.jpeg" alt="صورة 19" loading="lazy" class="wide">
+  <img src="Pics/94E5EE6A-6D95-4370-B822-BC524FA98F62_1_105_c.jpeg" alt="صورة 20" loading="lazy">
+  <img src="Pics/A8C9453A-F48D-4012-B1CC-93E70E0B951E_1_105_c.jpeg" alt="صورة 21" loading="lazy">
+  <img src="Pics/AB320E20-53F4-4FC3-A663-AADEE0A799E0_1_105_c.jpeg" alt="صورة 22" loading="lazy">
+  <img src="Pics/B6CD6328-D343-42A9-8ADF-545441B27709_1_105_c.jpeg" alt="صورة 23" loading="lazy">
+  <img src="Pics/CB553C58-625C-4A9B-8B39-CBD7085B6035_1_105_c.jpeg" alt="صورة 24" loading="lazy">
+  </div>
+</main>
+
+<div id="lightbox"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.155.0/build/three.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.13.0/gsap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.13.0/ScrollTrigger.min.js"></script>
+<script>
+// small perf logger to trace delays
+const _start = performance.now();
+function perf(label){ console.debug(`[perf +${Math.round(performance.now()-_start)}ms] ${label}`); }
+// log resource timing for a URL if available
+function logResourceTiming(url){
+  try{
+    const entries = performance.getEntriesByName(url) || [];
+    if(entries.length){
+      const e = entries[0];
+      console.debug('resourceTiming', url, {startTime: Math.round(e.startTime), fetchStart: Math.round(e.fetchStart), responseStart: Math.round(e.responseStart), responseEnd: Math.round(e.responseEnd), duration: Math.round(e.duration)});
+    } else {
+      console.debug('resourceTiming: no entry for', url);
+    }
+  }catch(err){ console.debug('resourceTiming error', err); }
+}
+// simple main-thread jank monitor during animations (short duration)
+function monitorJank(durationMs=600, thresholdMs=40){
+  const t0 = performance.now(); let last = t0; let maxDelta = 0;
+  function tick(){
+    const now = performance.now(); const delta = now - last; if(delta>maxDelta) maxDelta = delta; last = now;
+    if(now - t0 < durationMs) requestAnimationFrame(tick);
+    else { if(maxDelta > thresholdMs) console.warn('main-thread jank detected, max frame delta ms:', Math.round(maxDelta)); else console.debug('jank OK, max frame delta ms:', Math.round(maxDelta)); }
+  }
+  requestAnimationFrame(tick);
+}
+// --- Three.js stars background (copied from index.html) ---
+(function(){
+  const canvas = document.getElementById('canvas-bg');
+  const scene = new THREE.Scene();
+  scene.fog = new THREE.FogExp2(0x000000,0.0002);
+  const camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 10000);
+  camera.position.z = 0;
+  const renderer = new THREE.WebGLRenderer({canvas, alpha:true, antialias:true});
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.setPixelRatio(window.devicePixelRatio);
+  const pointSprite = new THREE.TextureLoader().load('https://threejs.org/examples/textures/sprites/disc.png');
+
+  function createStars(count, zRange){
+    const geometry = new THREE.BufferGeometry();
+    const positions = [];
+    const sizes = [];
+    const speeds = [];
+    const phases = [];
+
+    for(let i=0;i<count;i++){
+      positions.push((Math.random()-0.5)*4000,(Math.random()-0.5)*4000,-Math.random()*zRange);
+      sizes.push(Math.random()*2.6+1.4);
+      speeds.push(Math.random()*0.12+0.05);
+      phases.push(Math.random()*Math.PI*2);
+    }
+
+    geometry.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));
+    geometry.setAttribute('size',new THREE.Float32BufferAttribute(sizes,1));
+    geometry.setAttribute('speed',new THREE.Float32BufferAttribute(speeds,1));
+    geometry.setAttribute('phase',new THREE.Float32BufferAttribute(phases,1));
+
+    const material = new THREE.ShaderMaterial({
+      uniforms:{
+        time:{value:0},
+        pointTexture:{value:pointSprite}
+      },
+      vertexShader:`attribute float size; attribute float phase; varying float vDepth; varying float vPhase; void main(){ vec4 mvPosition=modelViewMatrix*vec4(position,1.0); vDepth=-mvPosition.z; vPhase=phase; gl_PointSize=size*(220.0/vDepth); gl_Position=projectionMatrix*mvPosition;}`,
+      fragmentShader:`uniform sampler2D pointTexture; uniform float time; varying float vDepth; varying float vPhase; void main(){ vec4 texColor=texture2D(pointTexture,gl_PointCoord); float intensity=1.06/(0.05+vDepth*0.00062); intensity *= 0.78 + 0.28*sin(time*2.0+vPhase); intensity *= smoothstep(0.0, 800.0, vDepth); gl_FragColor=vec4(vec3(intensity), texColor.a);}`,
+      transparent:true, blending:THREE.AdditiveBlending, depthTest:false
+    });
+
+    const points = new THREE.Points(geometry, material);
+    scene.add(points);
+    return points;
+  }
+
+  const nearStars = createStars(1700,1000);
+  const midStars = createStars(1100,3000);
+  const farStars = createStars(800,5000);
+
+  const nebulaGeometry = new THREE.PlaneGeometry(7000,7000,32,32);
+  const nebulaMaterial = new THREE.ShaderMaterial({
+    uniforms:{time:{value:0}},
+    vertexShader:`varying vec2 vUv; void main(){ vUv=uv; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0); }`,
+    fragmentShader:`varying vec2 vUv; uniform float time; void main(){ float n=sin(vUv.x*6.0 + time*0.04)*cos(vUv.y*6.0 + time*0.06); vec3 color=vec3(0.01,0.01,0.02)+vec3(n*0.04,n*0.02,n*0.04); gl_FragColor=vec4(color,0.45);}`,
+    transparent:true, blending:THREE.AdditiveBlending, depthTest:false
+  });
+  const nebula = new THREE.Mesh(nebulaGeometry, nebulaMaterial);
+  nebula.position.z = -1800;
+  scene.add(nebula);
+
+  // expose a small bgControl so UI can pause/resume rendering
+  window.bgControl = (function(){ let running = true; return { pause(){ running = false; }, resume(){ running = true; }, isRunning(){ return running; } }; })();
+
+  let lastTime = 0;
+  function animate(time){
+    requestAnimationFrame(animate);
+    if(window.bgControl && !window.bgControl.isRunning()){
+      // update minimal uniforms for visual continuity and skip heavy position updates
+      nebulaMaterial.uniforms.time.value = time*0.001;
+      return;
+    }
+    const delta = time - lastTime;
+    lastTime = time;
+    nebulaMaterial.uniforms.time.value = time*0.001;
+
+    [nearStars,midStars,farStars].forEach(layer=>{
+      const positions = layer.geometry.attributes.position.array;
+      const speeds = layer.geometry.attributes.speed.array;
+      const count = positions.length/3;
+      for(let i=0;i<count;i++){
+        let idx = i*3;
+        positions[idx+2] += speeds[i]*1.2;
+        if(positions[idx+2] > 50){
+          positions[idx] = (Math.random()-0.5)*4000;
+          positions[idx+1] = (Math.random()-0.5)*4000;
+          positions[idx+2] = -5000;
+        }
+      }
+      layer.geometry.attributes.position.needsUpdate = true;
+      layer.material.uniforms.time.value = time*0.001;
+    });
+
+    renderer.render(scene, camera);
+  }
+  animate();
+
+  window.addEventListener('resize', ()=>{ camera.aspect = window.innerWidth/window.innerHeight; camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth, window.innerHeight); });
+
+})();
+
+// --- GSAP ScrollTrigger animations ---
+gsap.registerPlugin(ScrollTrigger);
+window.addEventListener('load', ()=>{
+  document.querySelectorAll('.stage img').forEach((img,index)=>{
+    // reveal once and don't reverse when scrolling away
+    gsap.from(img, {
+      opacity:0, y:24,
+      scrollTrigger: {
+        trigger: img,
+        start: 'top bottom',
+        end: 'top 60%',
+        toggleActions: 'play none none none',
+        once: true
+      },
+      duration: 0.7,
+      ease: 'power3.out',
+      delay: (index%6)*0.03
+    });
+    // Subtle floating for variety, works with dynamic sizing
+    if(Math.random()>0.6){
+      gsap.to(img,{
+        y: "-=" + (6 + Math.random()*8),
+        yoyo: true,
+        repeat: -1,
+        duration: 5 + Math.random()*6,
+        ease: "sine.inOut"
+      });
+    }
+  });
+  // refresh ScrollTrigger in case images affected layout
+  ScrollTrigger.refresh();
+});
+
+// --- Simple Lightbox Overlay ---
+const lightbox = document.getElementById('lightbox');
+let activeImgEl = null;
+
+// Ensure images are keyboard-focusable
+document.querySelectorAll('.stage img').forEach(img => {
+  img.setAttribute('tabindex', '0');
+  img.style.cursor = 'pointer';
+});
+
+function showLightbox(src, alt) {
+  // Remove any previous image
+  lightbox.innerHTML = '';
+  // Create the image
+  const img = document.createElement('img');
+  img.className = 'lightbox-img';
+  img.src = src;
+  img.alt = alt || '';
+  img.style.opacity = '0';
+  activeImgEl = img;
+  lightbox.appendChild(img);
+  // Show overlay
+  lightbox.classList.add('show');
+  // Animate fade-in
+  if (img.complete && img.naturalWidth) {
+    gsap.to(img, { opacity: 1, duration: 0.32, ease: 'power2.out' });
+  } else {
+    img.onload = () => {
+      gsap.to(img, { opacity: 1, duration: 0.32, ease: 'power2.out' });
+    };
+    img.onerror = () => {
+      img.style.opacity = '1';
+    };
+  }
+}
+
+function hideLightbox() {
+  if (!lightbox.classList.contains('show')) return;
+  // Fade out overlay and cleanup
+  if (activeImgEl) {
+    gsap.to(activeImgEl, {
+      opacity: 0,
+      duration: 0.23,
+      ease: 'power2.in',
+      onComplete: () => {
+        lightbox.classList.remove('show');
+        lightbox.innerHTML = '';
+        activeImgEl = null;
+      }
+    });
+  } else {
+    lightbox.classList.remove('show');
+    lightbox.innerHTML = '';
+    activeImgEl = null;
+  }
+}
+
+// Click to open
+document.getElementById('gallery').addEventListener('click', (e) => {
+  const img = e.target.closest('.stage img');
+  if (!img) return;
+  showLightbox(img.src, img.alt);
+});
+// Keyboard open via Enter/Space
+document.getElementById('gallery').addEventListener('keydown', (e) => {
+  if (e.key !== 'Enter' && e.key !== ' ') return;
+  const img = e.target.closest && e.target.closest('.stage img') ? e.target : null;
+  if (img) {
+    e.preventDefault();
+    showLightbox(img.src, img.alt);
+  }
+});
+// Click outside image closes overlay
+lightbox.addEventListener('click', (e) => {
+  if (e.target === lightbox) hideLightbox();
+});
+// Pressing Escape closes overlay
+window.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') hideLightbox();
+});
+
+</script>
+</body>
+</html>
